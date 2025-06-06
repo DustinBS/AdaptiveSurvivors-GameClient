@@ -46,7 +46,7 @@ public class AdaptiveEnemy : MonoBehaviour
         }
 
         // Ensure enemyId matches EnemyHealth's ID
-        if (string.IsNullOrEmpty(enemyId))
+        if (string.IsNullOrEmpty(enemyId) || enemyId == "enemy_001") // Also check for default
         {
             enemyId = enemyHealth.EnemyId; // Use the ID from EnemyHealth
         }
@@ -206,6 +206,7 @@ public class AdaptiveEnemy : MonoBehaviour
 
     public float GetWeaponDamageResistance(string weaponId)
     {
-        return currentEnemyResistances.GetValueOrDefault(weaponId, 0.0);
+        // Explicitly cast to float to resolve the error
+        return (float)currentEnemyResistances.GetValueOrDefault(weaponId, 0.0);
     }
 }

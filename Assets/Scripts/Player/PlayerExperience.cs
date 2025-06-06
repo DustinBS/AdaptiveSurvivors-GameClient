@@ -44,7 +44,8 @@ public class PlayerExperience : MonoBehaviour
 
     void Awake()
     {
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        // Updated to use FindAnyObjectByType to resolve deprecation warning
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("PlayerExperience: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);

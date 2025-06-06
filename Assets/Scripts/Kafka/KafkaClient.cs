@@ -109,6 +109,7 @@ public class KafkaClient : MonoBehaviour
     /// Starts a background thread for Kafka message consumption.
     /// This prevents blocking the main Unity thread.
     /// </summary>
+    /// <param name="cancellationToken">Token to signal cancellation of the thread.</param>
     private void StartConsumerThread()
     {
         if (consumer == null)
@@ -267,51 +268,5 @@ public class KafkaClient : MonoBehaviour
         public System.Collections.Generic.HashSet<string> eliteStatusImmunities; // Using HashSet for sets
         public System.Collections.Generic.Dictionary<string, string> breakableObjectBuffsDebuffs;
         public long timestamp;
-    }
-}
-
-// --- UnityMainThreadDispatcher ---
-// A simple helper to dispatch actions to the Unity main thread from background threads.
-// This is necessary because most Unity API calls (e.g., Debug.Log, GameObject.Instantiate)
-// must be made from the main thread.
-// Add this as a separate C# script in your Unity project (e.g., Assets/Scripts/Utilities/UnityMainThreadDispatcher.cs)
-
-public class UnityMainThreadDispatcher : MonoBehaviour
-{
-    private static UnityMainThreadDispatcher _instance;
-    private readonly System.Collections.Generic.Queue<Action> _executionQueue = new System.Collections.Generic.Queue<Action>();
-
-    public static UnityMainThreadDispatcher Instance()
-    {
-        if (_instance == null)
-        {
-            _instance = FindObjectOfType<UnityMainThreadDispatcher>();
-            if (_instance == null)
-            {
-                GameObject obj = new GameObject("UnityMainThreadDispatcher");
-                _instance = obj.AddComponent<UnityMainThreadDispatcher>();
-                DontDestroyOnLoad(obj);
-            }
-        }
-        return _instance;
-    }
-
-    void Update()
-    {
-        lock (_executionQueue)
-        {
-            while (_executionQueue.Count > 0)
-            {
-                _executionQueue.Dequeue().Invoke();
-            }
-        }
-    }
-
-    public void Enqueue(Action action)
-    {
-        lock (_executionQueue)
-        {
-            _executionQueue.Enqueue(action);
-        }
     }
 }

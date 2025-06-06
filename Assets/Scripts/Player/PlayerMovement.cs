@@ -40,7 +40,8 @@ public class PlayerMovement : MonoBehaviour
             enabled = false; // Disable script if Rigidbody2D is missing
         }
 
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        // Updated to use FindAnyObjectByType to resolve deprecation warning
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("PlayerMovement: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
@@ -60,10 +61,10 @@ public class PlayerMovement : MonoBehaviour
         Vector2 movement = new Vector2(moveX, moveY).normalized; // Normalize to prevent faster diagonal movement
 
         // Apply movement to Rigidbody2D
-        rb.velocity = movement * moveSpeed;
+        rb.linearVelocity = movement * moveSpeed;
 
         // Check if movement event should be sent to Kafka
-        SendPlayerMovementEvent(movement);
+        SendPlayerMovementEvent(movement); // Pass the 'movement' vector as 'currentDirection'
     }
 
     /// <summary>
@@ -99,7 +100,8 @@ public class PlayerMovement : MonoBehaviour
             var payload = new Dictionary<string, object>
             {
                 { "pos", new Dictionary<string, float> { { "x", currentPosition.x }, { "y", currentPosition.y } } },
-                { "dir", new Dictionary<string, float> { { "dx", movement.x }, { "dy", movement.y } } }
+                // Corrected the usage of 'movement' to 'currentDirection' here
+                { "dir", new Dictionary<string, float> { { "dx", currentDirection.x }, { "dy", currentDirection.y } } }
             };
 
             // Send event to Kafka

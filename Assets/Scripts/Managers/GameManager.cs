@@ -43,7 +43,8 @@ public class GameManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject); // Keep GameManager alive across scenes if needed
 
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        // Updated to use FindAnyObjectByType to resolve deprecation warning
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("GameManager: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
@@ -144,7 +145,7 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"Requesting NPC commentary from: {cloudFunctionUrl} with payload: {jsonPayload}");
 
-        using (UnityEngine.Networking.UnityWebRequest webRequest = UnityEngine.Networking.UnityWebRequest.Post(cloudFunctionUrl, "POST"))
+        using (UnityEngine.Networking.UnityWebRequest webRequest = UnityEngine.Networking.UnityWebRequest.PostWwwForm(cloudFunctionUrl, "POST"))
         {
             byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonPayload);
             webRequest.uploadHandler = new UnityEngine.Networking.UploadHandlerRaw(bodyRaw);

@@ -2,6 +2,7 @@
 
 using UnityEngine;
 using System.Collections.Generic; // For Dictionary
+using System; // For Action delegate
 
 // This script manages the health of an enemy.
 // It also sends damage_taken_event and enemy_death_event to Kafka.
@@ -29,11 +30,15 @@ public class EnemyHealth : MonoBehaviour
     [Tooltip("ID of the player interacting with this enemy (usually the main player).")]
     public string playerId = "player_001"; // Should match the main player's ID
 
+    // Event fired when an enemy dies, allowing other scripts to subscribe (e.g., PlayerExperience to gain XP)
+    public static event Action<string, string> OnEnemyDeath; // EnemyId, EnemyType
+
     void Awake()
     {
         currentHealth = maxHealth;
 
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        // Updated to use FindAnyObjectByType to resolve deprecation warning
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("EnemyHealth: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
@@ -78,6 +83,9 @@ public class EnemyHealth : MonoBehaviour
         // Send enemy_death_event to Kafka
         SendEnemyDeathEvent();
 
+        // Invoke the OnEnemyDeath event so other scripts (like PlayerExperience) can react
+        OnEnemyDeath?.Invoke(EnemyId, EnemyType);
+
         // In a real game, you might play death animations, drop loot, etc.
         Destroy(gameObject);
     }
@@ -105,7 +113,8 @@ public class EnemyHealth : MonoBehaviour
     {
         // For simplicity, we'll assume the player's last hit killed the enemy.
         // In a complex system, you might track the last attacker.
-        string killedByWeaponId = FindObjectOfType<PlayerAttack>()?.weaponId ?? "unknown"; // Get player's weapon ID if available
+        // Updated to use FindAnyObjectByType to resolve deprecation warning
+        string killedByWeaponId = FindAnyObjectByType<PlayerAttack>()?.weaponId ?? "unknown"; // Get player's weapon ID if available
 
         var payload = new Dictionary<string, object>
         {
