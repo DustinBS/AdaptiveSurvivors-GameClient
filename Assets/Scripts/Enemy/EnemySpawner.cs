@@ -93,7 +93,6 @@ public class EnemySpawner : MonoBehaviour
         }
 
         GameObject enemyToSpawn = null;
-        bool isEliteSpawn = false;
 
         // Check if it's time to spawn an Elite enemy
         if (GameManager.Instance != null && GameManager.Instance.currentWave % eliteSpawnWaveInterval == 0 && adaptiveElitePrefab != null)
@@ -103,7 +102,6 @@ public class EnemySpawner : MonoBehaviour
             if (GameObject.FindGameObjectsWithTag("Enemy").Count(e => e.GetComponent<AdaptiveEnemy>() != null) == 0) // Only one elite at a time
             {
                 enemyToSpawn = adaptiveElitePrefab;
-                isEliteSpawn = true;
                 Debug.Log($"Spawning Adaptive Elite at wave {GameManager.Instance.currentWave}!");
             }
         }

@@ -1,8 +1,9 @@
 // GameClient/Assets/Scripts/Player/PlayerAttack.cs
 
 using UnityEngine;
+using UnityEngine.InputSystem; // Required for new Input System
 using System.Collections.Generic;
-using System.Linq; // For OrderByDescending
+using System.Linq;
 
 // This script manages the player's auto-attack mechanism.
 // It will periodically find and attack nearby enemies, sending weapon_hit_event to Kafka.
@@ -32,9 +33,12 @@ public class PlayerAttack : MonoBehaviour
 
     private float attackTimer;
 
+    // auto-attack for bullet-heaven roguelite.
+    private PlayerControls playerControls;
+
+
     void Awake()
     {
-        // Updated to use FindAnyObjectByType to resolve deprecation warning
         kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
@@ -42,11 +46,29 @@ public class PlayerAttack : MonoBehaviour
             enabled = false;
         }
 
+        playerControls = new PlayerControls();
+        // The Attack action is defined in PlayerControls, but its 'performed' and 'canceled' events
+        // are no longer directly subscribed here, as 'attackButtonPressed' is removed.
+        // If manual attack was desired, this logic would need to be reinstated and used in Update.
+
         attackTimer = attackInterval; // Initialize timer to attack immediately on start
+    }
+
+    void OnEnable()
+    {
+        playerControls.Enable(); // Enable the input action map
+    }
+
+    void OnDisable()
+    {
+        playerControls.Disable(); // Disable the input action map
     }
 
     void Update()
     {
+        // For "bullet-heaven roguelite" typically means auto-fire, so timer drives it.
+        // The `attackButtonPressed` flag was removed as it was not being utilized for gameplay logic
+        // and the primary design is auto-attack.
         attackTimer -= Time.deltaTime;
 
         if (attackTimer <= 0)
@@ -62,8 +84,6 @@ public class PlayerAttack : MonoBehaviour
     private void PerformAttack()
     {
         // Step 1: Find the nearest enemy within attack range.
-        // For a more robust solution, use Physics.OverlapCircleAll or similar
-        // with a specific enemy layer to avoid hitting non-enemies.
         GameObject nearestEnemy = FindNearestEnemy();
 
         if (nearestEnemy != null)
@@ -73,7 +93,6 @@ public class PlayerAttack : MonoBehaviour
             if (enemyHealth != null)
             {
                 // Step 3: Apply damage to the enemy.
-                // In a real game, this might involve crit chance, damage modifiers, etc.
                 float actualDamageDealt = baseDamage;
                 enemyHealth.TakeDamage(actualDamageDealt, "player_attack");
 
@@ -87,15 +106,10 @@ public class PlayerAttack : MonoBehaviour
                 Debug.LogWarning($"PlayerAttack: Found enemy '{nearestEnemy.name}' but no EnemyHealth component.", nearestEnemy);
             }
         }
-        // else
-        // {
-        //     Debug.Log("No enemy found within attack range.");
-        // }
     }
 
     /// <summary>
     /// Finds the nearest GameObject tagged "Enemy" within the attack range.
-    /// This is a simple implementation and can be optimized for performance (e.g., using object pooling, spatial partitioning).
     /// </summary>
     /// <returns>The nearest enemy GameObject, or null if no enemy is found.</returns>
     private GameObject FindNearestEnemy()

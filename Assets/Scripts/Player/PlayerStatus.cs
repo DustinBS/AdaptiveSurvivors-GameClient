@@ -40,7 +40,7 @@ public class PlayerStatus : MonoBehaviour
         currentHealth = maxHealth;
         currentMana = maxMana; // Initialize mana
 
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("PlayerStatus: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
@@ -209,6 +209,6 @@ public class PlayerStatus : MonoBehaviour
     }
 
     // Example of how other scripts might call this to deal damage:
-    // var playerStatus = GameObject.FindObjectOfType<PlayerStatus>();
+    // var playerStatus = GameObject.FindAnyObjectByType<PlayerStatus>(); // Corrected for deprecation
     // if (playerStatus != null) playerStatus.TakeDamage(10f, "enemy_attack");
 }
