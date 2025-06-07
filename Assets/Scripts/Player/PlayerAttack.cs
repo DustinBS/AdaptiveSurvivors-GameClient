@@ -99,7 +99,7 @@ public class PlayerAttack : MonoBehaviour
                 // Step 4: Send weapon_hit_event to Kafka.
                 SendWeaponHitEvent(actualDamageDealt, enemyHealth.EnemyId);
 
-                Debug.Log($"Player attacked enemy '{enemyHealth.EnemyId}' dealing {actualDamageDealt} damage.");
+                // Commented Debug.Log($"Player attacked enemy '{enemyHealth.EnemyId}' dealing {actualDamageDealt} damage.");
             }
             else
             {

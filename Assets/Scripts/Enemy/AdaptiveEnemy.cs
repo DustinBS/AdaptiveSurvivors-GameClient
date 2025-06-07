@@ -83,7 +83,7 @@ public class AdaptiveEnemy : MonoBehaviour
         // If it were a multiplayer game, you'd check `parameters.playerId` to apply
         // adaptations specific to that player's influence.
 
-        Debug.Log($"AdaptiveEnemy: Received new adaptive parameters for player {parameters.playerId}. Applying adaptations to {enemyId}.");
+        // Commented Debug.Log($"AdaptiveEnemy: Received new adaptive parameters for player {parameters.playerId}. Applying adaptations to {enemyId}.");
 
         // Apply Enemy Resistances
         currentEnemyResistances = parameters.enemyResistances;
@@ -118,7 +118,7 @@ public class AdaptiveEnemy : MonoBehaviour
             {
                 resistances += $"{entry.Key}: {entry.Value * 100}% ";
             }
-            Debug.Log($"Enemy {enemyId} now has resistances: {resistances}");
+            // Commented Debug.Log($"Enemy {enemyId} now has resistances: {resistances}");
             // Example: If PlayerAttack knows the weaponId, it can query EnemyHealth for effective damage.
             // Or EnemyHealth itself can consult this script.
         }
@@ -136,27 +136,27 @@ public class AdaptiveEnemy : MonoBehaviour
             case "anticipate_right":
             case "anticipate_forward":
             case "anticipate_backward":
-                Debug.Log($"Enemy {enemyId}: Will try to anticipate player's dodge direction: {currentEliteBehaviorShift.Replace("anticipate_", "")}");
+                // Commented Debug.Log($"Enemy {enemyId}: Will try to anticipate player's dodge direction: {currentEliteBehaviorShift.Replace("anticipate_", "")}");
                 // Implement logic in enemy AI to move towards anticipated player position.
                 break;
             case "speed_aggression_boost":
                 currentMoveSpeed = baseMoveSpeed * 1.5f; // 50% speed increase
                 currentAttackDamage = baseAttackDamage * 1.2f; // 20% damage increase
-                Debug.Log($"Enemy {enemyId}: Gained speed and aggression boost! New Speed: {currentMoveSpeed}, New Damage: {currentAttackDamage}");
+                // Commented Debug.Log($"Enemy {enemyId}: Gained speed and aggression boost! New Speed: {currentMoveSpeed}, New Damage: {currentAttackDamage}");
                 // Update enemy's movement and attack components
                 break;
             case "temporary_slow_on_hit":
-                Debug.Log($"Enemy {enemyId}: Now applies a temporary slow on hit.");
+                // Commented Debug.Log($"Enemy {enemyId}: Now applies a temporary slow on hit.");
                 // Implement logic in enemy's attack script to apply a slow debuff.
                 break;
             case "none":
                 currentMoveSpeed = baseMoveSpeed;
                 currentAttackDamage = baseAttackDamage;
                 // Reset to base
-                Debug.Log($"Enemy {enemyId}: Behavior shift reset to none. Speed: {currentMoveSpeed}, Damage: {currentAttackDamage}");
+                // Commented Debug.Log($"Enemy {enemyId}: Behavior shift reset to none. Speed: {currentMoveSpeed}, Damage: {currentAttackDamage}");
                 break;
             default:
-                Debug.Log($"Enemy {enemyId}: Unknown behavior shift: {currentEliteBehaviorShift}");
+                // Commented Debug.Log($"Enemy {enemyId}: Unknown behavior shift: {currentEliteBehaviorShift}");
                 break;
         }
 
@@ -174,7 +174,7 @@ public class AdaptiveEnemy : MonoBehaviour
         if (currentEliteStatusImmunities.Count > 0)
         {
             string immunities = string.Join(", ", currentEliteStatusImmunities);
-            Debug.Log($"Enemy {enemyId} is now immune to: {immunities}");
+            // Commented Debug.Log($"Enemy {enemyId} is now immune to: {immunities}");
             // Implement logic to prevent status effects from being applied (e.g., in a StatusEffectManager).
         }
     }
@@ -191,7 +191,7 @@ public class AdaptiveEnemy : MonoBehaviour
         {
             foreach (var entry in currentBreakableObjectBuffsDebuffs)
             {
-                Debug.Log($"Enemy {enemyId} affected by breakable object effect from '{entry.Key}': {entry.Value}");
+                // Commented Debug.Log($"Enemy {enemyId} affected by breakable object effect from '{entry.Key}': {entry.Value}");
                 // Further logic here to interpret and apply the effect, e.g., temporary buffs/debuffs on the enemy.
             }
         }

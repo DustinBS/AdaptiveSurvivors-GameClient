@@ -62,7 +62,7 @@ public class EnemyHealth : MonoBehaviour
         if (!enabled) return; // Don't take damage if script is disabled
 
         currentHealth -= amount;
-        Debug.Log($"{gameObject.name} ({EnemyId}) took {amount} damage. Current Health: {currentHealth}");
+        // Commented Debug.Log($"{gameObject.name} ({EnemyId}) took {amount} damage. Current Health: {currentHealth}");
 
         // Send damage_taken_event to Kafka
         SendDamageTakenEvent(amount, sourceType);
@@ -78,7 +78,7 @@ public class EnemyHealth : MonoBehaviour
     /// </summary>
     private void Die()
     {
-        Debug.Log($"{gameObject.name} ({EnemyId}) died!");
+        // Commented Debug.Log($"{gameObject.name} ({EnemyId}) died!");
 
         // Send enemy_death_event to Kafka
         SendEnemyDeathEvent();

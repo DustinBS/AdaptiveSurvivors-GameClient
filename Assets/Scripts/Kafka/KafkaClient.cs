@@ -170,7 +170,7 @@ public class KafkaClient : MonoBehaviour
                 if (consumeResult != null && consumeResult.Message != null)
                 {
                     string message = consumeResult.Message.Value;
-                    Debug.Log($"Consumed message from Kafka: {message}");
+                    // Commented Debug.Log($"Consumed message from Kafka: {message}");
 
                     // Use the PRE-CACHED reference to the dispatcher.
                     // This avoids calling .Instance() and searching from the background thread.
@@ -182,7 +182,7 @@ public class KafkaClient : MonoBehaviour
             }
             catch (OperationCanceledException)
             {
-                Debug.Log("Kafka Consumer thread cancelled.");
+                // Commented Debug.Log("Kafka Consumer thread cancelled.");
                 break;
             }
             catch (Exception e)

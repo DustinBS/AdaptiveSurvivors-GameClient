@@ -73,7 +73,7 @@ public class PlayerStatus : MonoBehaviour
         currentHealth -= amount;
         if (currentHealth < 0) currentHealth = 0;
 
-        Debug.Log($"Player took {amount} damage from {sourceEnemyId}. Current HP: {currentHealth}/{maxHealth}");
+        // Commented Debug.Log($"Player took {amount} damage from {sourceEnemyId}. Current HP: {currentHealth}/{maxHealth}");
 
         // Optionally, send a specific damage_taken_event for the player as well,
         // although the GDD only specified it for enemies.
@@ -94,7 +94,7 @@ public class PlayerStatus : MonoBehaviour
     {
         currentHealth += amount;
         if (currentHealth > maxHealth) currentHealth = maxHealth;
-        Debug.Log($"Player healed for {amount}. Current HP: {currentHealth}/{maxHealth}");
+        // Commented Debug.Log($"Player healed for {amount}. Current HP: {currentHealth}/{maxHealth}");
     }
 
     /// <summary>
@@ -107,10 +107,10 @@ public class PlayerStatus : MonoBehaviour
         if (currentMana >= amount)
         {
             currentMana -= amount;
-            Debug.Log($"Player consumed {amount} mana. Current Mana: {currentMana}/{maxMana}");
+            // Commented Debug.Log($"Player consumed {amount} mana. Current Mana: {currentMana}/{maxMana}");
             return true;
         }
-        Debug.Log($"Not enough mana to consume {amount}. Current Mana: {currentMana}/{maxMana}");
+        // Commented Debug.Log($"Not enough mana to consume {amount}. Current Mana: {currentMana}/{maxMana}");
         return false;
     }
 
@@ -122,7 +122,7 @@ public class PlayerStatus : MonoBehaviour
     {
         currentMana += amount;
         if (currentMana > maxMana) currentMana = maxMana;
-        Debug.Log($"Player gained {amount} mana. Current Mana: {currentMana}/{maxMana}");
+        // Commented Debug.Log($"Player gained {amount} mana. Current Mana: {currentMana}/{maxMana}");
     }
 
 
@@ -135,7 +135,7 @@ public class PlayerStatus : MonoBehaviour
         if (!activeBuffs.Contains(buffName))
         {
             activeBuffs.Add(buffName);
-            Debug.Log($"Buff added: {buffName}");
+            // Commented Debug.Log($"Buff added: {buffName}");
             // Trigger visual/gameplay effects of the buff
         }
     }
@@ -148,7 +148,7 @@ public class PlayerStatus : MonoBehaviour
     {
         if (activeBuffs.Remove(buffName))
         {
-            Debug.Log($"Buff removed: {buffName}");
+            // Commented Debug.Log($"Buff removed: {buffName}");
             // Remove visual/gameplay effects of the buff
         }
     }
@@ -162,7 +162,7 @@ public class PlayerStatus : MonoBehaviour
         if (!activeDebuffs.Contains(debuffName))
         {
             activeDebuffs.Add(debuffName);
-            Debug.Log($"Debuff added: {debuffName}");
+            // Commented Debug.Log($"Debuff added: {debuffName}");
             // Trigger visual/gameplay effects of the debuff
         }
     }
@@ -175,7 +175,7 @@ public class PlayerStatus : MonoBehaviour
     {
         if (activeDebuffs.Remove(debuffName))
         {
-            Debug.Log($"Debuff removed: {debuffName}");
+            // Commented Debug.Log($"Debuff removed: {debuffName}");
             // Remove visual/gameplay effects of the debuff
         }
     }
@@ -185,7 +185,7 @@ public class PlayerStatus : MonoBehaviour
     /// </summary>
     private void Die()
     {
-        Debug.Log("Player has died!");
+        // Commented Debug.Log("Player has died!");
         // Trigger game over sequence, load meta-progression screen etc.
         // For POC, simply disable the player object.
         gameObject.SetActive(false);
