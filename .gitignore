@@ -1,8 +1,15 @@
 # Unity specific ignores
-Library/
-Temp/
-Obj/
-Build/
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Mm]emoryCaptures/
+/[Uu]ser[Ss]ettings/
+[Aa]ssets/Plugins/Editor/VisualStudio/
+/[Pp]ackages/[Ll]ocal[Cc]ache/
+/[Pp]ackages/[Tt]emp/
 *.csproj
 *.unityproj
 *.sln
