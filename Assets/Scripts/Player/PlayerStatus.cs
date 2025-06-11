@@ -2,57 +2,67 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq; // For .ToList() and other LINQ operations
+using System.Linq;
+using System;
 
-// This script manages the player's health, mana, and active buffs/debuffs.
-// It sends player_status_event to Kafka periodically and handles incoming damage.
-
+/// <summary>
+/// Manages the player's health and other core stats.
+/// Broadcasts events for health changes and player death.
+/// </summary>
 public class PlayerStatus : MonoBehaviour
 {
     [Header("Player Stats")]
-    [Tooltip("The unique ID of the player. Should match other player scripts.")]
     public string playerId = "player_001";
-
-    [Tooltip("The maximum health points of the player.")]
     public float maxHealth = 100f;
-    [Tooltip("The current health points of the player.")]
     public float currentHealth;
-
-    [Tooltip("The maximum mana points of the player. Set to 0 if mana is not used.")]
     public float maxMana = 50f;
-    [Tooltip("The current mana points of the player.")]
     public float currentMana;
-
-    [Tooltip("List of currently active buffs on the player.")]
     public List<string> activeBuffs = new List<string>();
-    [Tooltip("List of currently active debuffs on the player.")]
     public List<string> activeDebuffs = new List<string>();
 
     [Header("Kafka Event Settings")]
-    [Tooltip("How often (in seconds) player_status_event is sent to Kafka.")]
-    public float statusEventSendInterval = 1.0f; // Send status every 1 second
+    public float statusEventSendInterval = 1.0f;
+
+    // --- Events for other systems to subscribe to ---
+    /// <summary>
+    /// Event fired when health changes. Parameters: currentHealth (float), maxHealth (float).
+    /// </summary>
+    public event Action<float, float> OnHealthChanged;
+    
+    /// <summary>
+    /// A static event fired globally when the player's health reaches zero.
+    /// Static events can be subscribed to by any script without needing a direct reference to this component instance.
+    /// </summary>
+    public static event Action OnPlayerDeath;
+
 
     private KafkaClient kafkaClient;
     private float statusEventTimer;
+    private bool isDead = false;
 
     void Awake()
     {
         currentHealth = maxHealth;
-        currentMana = maxMana; // Initialize mana
+        currentMana = maxMana;
 
         kafkaClient = FindAnyObjectByType<KafkaClient>();
         if (kafkaClient == null)
         {
-            Debug.LogError("PlayerStatus: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
+            Debug.LogError("PlayerStatus: KafkaClient not found.", this);
             enabled = false;
         }
 
         statusEventTimer = statusEventSendInterval;
     }
 
+    void Start()
+    {
+        // Fire the event on start to initialize UI elements like the health bar.
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
     void Update()
     {
-        // Periodically send player status to Kafka
         statusEventTimer -= Time.deltaTime;
         if (statusEventTimer <= 0)
         {
@@ -61,24 +71,15 @@ public class PlayerStatus : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Reduces the player's health.
-    /// </summary>
-    /// <param name="amount">The amount of damage to take.</param>
-    /// <param name="sourceEnemyId">The ID of the enemy that dealt the damage (optional).</param>
     public void TakeDamage(float amount, string sourceEnemyId = "unknown_enemy")
     {
-        if (!enabled) return;
+        // Prevent taking damage if already dead.
+        if (isDead) return;
 
         currentHealth -= amount;
         if (currentHealth < 0) currentHealth = 0;
 
-        // Commented Debug.Log($"Player took {amount} damage from {sourceEnemyId}. Current HP: {currentHealth}/{maxHealth}");
-
-        // Optionally, send a specific damage_taken_event for the player as well,
-        // although the GDD only specified it for enemies.
-        // If the Flink job needs to know how much damage *player* takes, this would be the place.
-        // For now, focusing on the GDD's player_status_event.
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
         if (currentHealth <= 0)
         {
@@ -86,129 +87,62 @@ public class PlayerStatus : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Restores player health.
-    /// </summary>
-    /// <param name="amount">The amount of health to restore.</param>
     public void Heal(float amount)
     {
+        if (isDead) return;
+
         currentHealth += amount;
         if (currentHealth > maxHealth) currentHealth = maxHealth;
-        // Commented Debug.Log($"Player healed for {amount}. Current HP: {currentHealth}/{maxHealth}");
+        
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
-
+    
     /// <summary>
-    /// Consumes mana.
-    /// </summary>
-    /// <param name="amount">The amount of mana to consume.</param>
-    /// <returns>True if mana was consumed successfully, false otherwise (e.g., not enough mana).</returns>
-    public bool ConsumeMana(float amount)
-    {
-        if (currentMana >= amount)
-        {
-            currentMana -= amount;
-            // Commented Debug.Log($"Player consumed {amount} mana. Current Mana: {currentMana}/{maxMana}");
-            return true;
-        }
-        // Commented Debug.Log($"Not enough mana to consume {amount}. Current Mana: {currentMana}/{maxMana}");
-        return false;
-    }
-
-    /// <summary>
-    /// Adds mana to the player.
-    /// </summary>
-    /// <param name="amount">The amount of mana to add.</param>
-    public void AddMana(float amount)
-    {
-        currentMana += amount;
-        if (currentMana > maxMana) currentMana = maxMana;
-        // Commented Debug.Log($"Player gained {amount} mana. Current Mana: {currentMana}/{maxMana}");
-    }
-
-
-    /// <summary>
-    /// Adds a buff to the player.
-    /// </summary>
-    /// <param name="buffName">The name of the buff.</param>
-    public void AddBuff(string buffName)
-    {
-        if (!activeBuffs.Contains(buffName))
-        {
-            activeBuffs.Add(buffName);
-            // Commented Debug.Log($"Buff added: {buffName}");
-            // Trigger visual/gameplay effects of the buff
-        }
-    }
-
-    /// <summary>
-    /// Removes a buff from the player.
-    /// </summary>
-    /// <param name="buffName">The name of the buff to remove.</param>
-    public void RemoveBuff(string buffName)
-    {
-        if (activeBuffs.Remove(buffName))
-        {
-            // Commented Debug.Log($"Buff removed: {buffName}");
-            // Remove visual/gameplay effects of the buff
-        }
-    }
-
-    /// <summary>
-    /// Adds a debuff to the player.
-    /// </summary>
-    /// <param name="debuffName">The name of the debuff.</param>
-    public void AddDebuff(string debuffName)
-    {
-        if (!activeDebuffs.Contains(debuffName))
-        {
-            activeDebuffs.Add(debuffName);
-            // Commented Debug.Log($"Debuff added: {debuffName}");
-            // Trigger visual/gameplay effects of the debuff
-        }
-    }
-
-    /// <summary>
-    /// Removes a debuff from the player.
-    /// </summary>
-    /// <param name="debuffName">The name of the debuff to remove.</param>
-    public void RemoveDebuff(string debuffName)
-    {
-        if (activeDebuffs.Remove(debuffName))
-        {
-            // Commented Debug.Log($"Debuff removed: {debuffName}");
-            // Remove visual/gameplay effects of the debuff
-        }
-    }
-
-    /// <summary>
-    /// Handles player death.
+    /// Handles the player's death sequence.
     /// </summary>
     private void Die()
     {
-        // Commented Debug.Log("Player has died!");
-        // Trigger game over sequence, load meta-progression screen etc.
-        // For POC, simply disable the player object.
+        isDead = true;
+        Debug.Log("Player has died. Broadcasting OnPlayerDeath event.");
+
+        // --- MODIFIED: Invoke the static event ---
+        // Any system interested in player death can listen for this.
+        OnPlayerDeath?.Invoke();
+
+        // Deactivate the player object to stop movement, attacks, etc.
         gameObject.SetActive(false);
     }
 
-    /// <summary>
-    /// Sends the current player status (HP, mana, buffs, debuffs) to Kafka.
-    /// </summary>
+    #region Unchanged Methods
+    public bool ConsumeMana(float amount)
+    {
+        if (isDead) return false;
+        if (currentMana >= amount)
+        {
+            currentMana -= amount;
+            return true;
+        }
+        return false;
+    }
+
+    public void AddMana(float amount)
+    {
+        if (isDead) return;
+        currentMana += amount;
+        if (currentMana > maxMana) currentMana = maxMana;
+    }
+
     private void SendPlayerStatusEvent()
     {
         var payload = new Dictionary<string, object>
         {
             { "hp", currentHealth },
             { "mana", currentMana },
-            { "active_buffs", activeBuffs.ToList() }, // Convert HashSet to List for JSON serialization
+            { "active_buffs", activeBuffs.ToList() },
             { "active_debuffs", activeDebuffs.ToList() }
         };
 
         kafkaClient.SendGameplayEvent("player_status_event", playerId, payload);
-        // Debug.Log("Player status event sent to Kafka.");
     }
-
-    // Example of how other scripts might call this to deal damage:
-    // var playerStatus = GameObject.FindAnyObjectByType<PlayerStatus>(); // Corrected for deprecation
-    // if (playerStatus != null) playerStatus.TakeDamage(10f, "enemy_attack");
+    #endregion
 }

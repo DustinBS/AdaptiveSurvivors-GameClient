@@ -1,0 +1,30 @@
+<!-- GameClient/Assets/UI/PlayerHealthBar.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!--
+        This is the root container for the health bar.
+        The 'health-bar-container' class will be used in USS to style its position and layout.
+    -->
+    <ui:VisualElement name="HealthBarContainer" class="health-bar-container">
+
+        <!--
+            This is the background of the progress bar.
+            The 'health-bar__background' class styles its color, border, etc.
+        -->
+        <ui:VisualElement name="HealthBarBackground" class="health-bar__background">
+
+            <!--
+                This is the foreground element that will be scaled to show the current health.
+                We give it a specific name "HealthBarForeground" so the C# script can easily find and manipulate it.
+            -->
+            <ui:VisualElement name="HealthBarForeground" class="health-bar__foreground" />
+
+        </ui:VisualElement>
+
+        <!--
+            This is the label for the numerical health text (e.g., "100 / 100").
+            We name it "HealthLabel" for easy access from C#.
+        -->
+        <ui:Label name="HealthLabel" text="100 / 100" class="health-bar__label" />
+
+    </ui:VisualElement>
+</ui:UXML>

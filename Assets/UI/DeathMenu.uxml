@@ -1,0 +1,35 @@
+<!-- GameClient/Assets/UI/DeathMenu.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!--
+        This is the main container that darkens the background.
+        It uses a class for styling and is a single, screen-filling element.
+    -->
+    <ui:VisualElement name="Container" class="death-menu-container">
+
+        <!--
+            This is the panel that holds the content (title and buttons).
+            It has its own class for centering, background color, and borders.
+        -->
+        <ui:VisualElement name="MenuPanel" class="menu-panel">
+
+            <!-- A simple text label for the title of the menu. -->
+            <ui:Label text="You Have Died" class="title-label" />
+
+            <!-- A container to hold the buttons, making it easy to space them out. -->
+            <ui:VisualElement name="ButtonContainer" class="button-container">
+
+                <!--
+                    The 'Restart' button. We give it a specific name so the C# script
+                    can easily find it and attach a click event.
+                -->
+                <ui:Button name="RestartButton" text="Restart" class="menu-button" />
+
+                <!--
+                    The 'Return to Hub' button, also named for C# access.
+                -->
+                <ui:Button name="HubButton" text="Return to Hub" class="menu-button" />
+
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

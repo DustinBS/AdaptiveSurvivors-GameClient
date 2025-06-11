@@ -1,0 +1,65 @@
+/* GameClient/Assets/UI/PlayerHealthBar.uss */
+
+/* * This is the main container for the health bar.
+ * It's positioned at the bottom-center of the screen.
+ * - `position: absolute` lets us place it relative to the screen edges.
+ * - `align-self: center` and `bottom: 20px` handle the positioning.
+ */
+.health-bar-container {
+    position: absolute;
+    bottom: 20px;
+    align-self: center; /* Horizontally centers the element */
+    width: 300px;
+    height: 30px;
+}
+
+/* * This styles the background of the health bar.
+ * It's a dark, semi-transparent color with a subtle border.
+ */
+.health-bar__background {
+    flex-grow: 1; /* Makes it fill the container */
+    background-color: rgb(40, 40, 40);
+    border-color: rgb(10, 10, 10);
+    border-width: 2px;
+    border-radius: 8px;
+    /* This creates the inner shadow effect for depth */
+    -unity-slice-left: 5;
+    -unity-slice-top: 5;
+    -unity-slice-right: 5;
+    -unity-slice-bottom: 5;
+    padding: 3px;
+}
+
+/* * This styles the foreground (the part that shows current health).
+ * It's a bright red. Its width will be controlled by the C# script.
+ */
+.health-bar__foreground {
+    background-color: rgb(220, 40, 40);
+    border-radius: 5px;
+    height: 100%;
+    width: 100%; /* Starts at 100% width, will be changed by code */
+
+    /* A subtle transition makes health changes look smoother */
+    transition-property: width;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-out;
+}
+
+/*
+ * This styles the numerical text label.
+ * It's positioned on top of the health bar using absolute positioning.
+ * The text has a shadow to make it stand out against the bar.
+ */
+.health-bar__label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    color: white;
+    -unity-font-style: bold;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    /* Text shadow: horizontal offset, vertical offset, blur radius, color */
+    text-shadow: 1px 1px 2px rgb(0, 0, 0);
+}

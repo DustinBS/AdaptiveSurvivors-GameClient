@@ -46,7 +46,8 @@ public class PlayerExperience : MonoBehaviour
     void Awake()
     {
         // Cache references to all necessary components
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        // Using FindAnyObjectByType as it's faster if any instance is acceptable.
+        kafkaClient = FindAnyObjectByType<KafkaClient>();
         playerStatus = GetComponent<PlayerStatus>();
         playerAttack = GetComponent<PlayerAttack>();
         playerMovement = GetComponent<PlayerMovement>();
@@ -60,11 +61,13 @@ public class PlayerExperience : MonoBehaviour
 
     void OnEnable()
     {
+        // Correctly subscribe to the event.
         EnemyHealth.OnEnemyDeath += HandleEnemyDeath;
     }
 
     void OnDisable()
     {
+        // Correctly unsubscribe from the event.
         EnemyHealth.OnEnemyDeath -= HandleEnemyDeath;
     }
 
@@ -103,7 +106,6 @@ public class PlayerExperience : MonoBehaviour
 
     /// <summary>
     /// Selects random, unique upgrades from the pool and applies the player's choice.
-    /// In a real game, this would pause and show a UI. Here, it auto-selects for demonstration.
     /// </summary>
     private void PresentUpgradeChoices()
     {
@@ -113,12 +115,12 @@ public class PlayerExperience : MonoBehaviour
             return;
         }
 
-        // Use LINQ to get a random subset of unique upgrades
         var random = new System.Random();
         var offeredUpgrades = upgradePool.OrderBy(x => random.Next()).Take(numberOfUpgradeChoices).ToList();
 
         if (offeredUpgrades.Count > 0)
         {
+            // In a real implementation, you would trigger a UI panel here.
             Debug.Log("Choose your upgrade:");
             foreach (var upgrade in offeredUpgrades)
             {
@@ -126,8 +128,6 @@ public class PlayerExperience : MonoBehaviour
             }
 
             // --- Player Choice Simulation ---
-            // In a real implementation, you would wait for player input from a UI here.
-            // For now, we'll just auto-pick the first one.
             UpgradeData chosenUpgrade = offeredUpgrades[0];
             Debug.Log($"Player chose: {chosenUpgrade.title}");
 
@@ -141,25 +141,26 @@ public class PlayerExperience : MonoBehaviour
     /// </summary>
     private void ApplyUpgrade(UpgradeData upgrade)
     {
-        // This switch statement is the core of the upgrade system, directing the upgrade's value
-        // to the correct component and stat.
         switch (upgrade.upgradeType)
         {
             case UpgradeType.MaxHealth:
                 playerStatus.maxHealth += upgrade.value;
-                playerStatus.currentHealth += upgrade.value; // Also heal for the increased amount
+                playerStatus.Heal(upgrade.value); // Also heal for the increased amount
                 break;
             case UpgradeType.MoveSpeed:
-                playerMovement.moveSpeed *= (1 + upgrade.value); // Assumes percentage
+                playerMovement.moveSpeed *= (1 + upgrade.value);
                 break;
             case UpgradeType.WeaponDamage:
-                playerAttack.currentWeapon.baseDamage *= (1 + upgrade.value); // Assumes percentage
+                // Note: Modifying ScriptableObject at runtime is possible but affects all instances.
+                // A better approach for stats is to have local variables in PlayerAttack that are initialized
+                // from the SO and then modified. For simplicity now, we modify the SO instance directly.
+                playerAttack.currentWeapon.baseDamage *= (1 + upgrade.value);
+                playerAttack.InitializeWeaponStats(); // Re-initialize to apply changes
                 break;
             case UpgradeType.AttackSpeed:
-                // Reducing attack interval increases attack speed
-                playerAttack.currentWeapon.attackInterval *= (1 - upgrade.value); // Assumes percentage
+                playerAttack.currentWeapon.attackInterval *= (1 - upgrade.value);
+                playerAttack.InitializeWeaponStats(); // Re-initialize to apply changes
                 break;
-            // Add other cases here for Armor, MagnetRange, etc.
             default:
                 Debug.LogWarning($"Upgrade type '{upgrade.upgradeType}' not implemented yet.");
                 break;
@@ -172,7 +173,6 @@ public class PlayerExperience : MonoBehaviour
     private void SendUpgradeChoiceEvent(UpgradeData chosenUpgrade, List<UpgradeData> offeredUpgrades)
     {
         var rejectedIds = offeredUpgrades.Where(u => u != chosenUpgrade).Select(u => u.upgradeID).ToList();
-
         var payload = new Dictionary<string, object>
         {
             { "lvl", currentLevel },
@@ -184,8 +184,9 @@ public class PlayerExperience : MonoBehaviour
 
     /// <summary>
     /// Event handler that is called when an enemy is defeated.
+    /// [FIX] The method signature now correctly matches the 'OnEnemyDeath' event delegate.
     /// </summary>
-    private void HandleEnemyDeath(string enemyId, float xpValue)
+    private void HandleEnemyDeath(string enemyId, string enemyType, float xpValue)
     {
         AddXP(xpValue);
     }
