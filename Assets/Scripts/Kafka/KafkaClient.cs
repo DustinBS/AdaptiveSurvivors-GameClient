@@ -4,7 +4,7 @@ using UnityEngine;
 using System;
 using System.Threading;
 using Confluent.Kafka;
-using Newtonsoft.Json; // Assuming you'll add Newtonsoft.Json-for-Unity via UPM or as a plugin
+using Newtonsoft.Json;
 
 // This script handles Kafka communication for the Unity game client.
 // It acts as both a producer for gameplay events and a consumer for adaptive parameters.
@@ -14,6 +14,8 @@ using Newtonsoft.Json; // Assuming you'll add Newtonsoft.Json-for-Unity via UPM 
 
 public class KafkaClient : MonoBehaviour
 {
+    public static KafkaClient Instance { get; private set; } // Add a static instance for easy access
+
     [Header("Kafka Settings")]
     [Tooltip("Comma-separated list of Kafka broker addresses (e.g., 'localhost:29092')")]
     public string bootstrapServers = "localhost:29092";
@@ -49,6 +51,16 @@ public class KafkaClient : MonoBehaviour
 
     void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject); // Destroy duplicate instances
+        }
+        else
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // Make this GameObject persist
+            Debug.Log("KafkaClient: Instance created and set to DontDestroyOnLoad.");
+        }
         // Find the dispatcher on the main thread and cache it for later use.
         // This is a safe operation because Awake() is always on the main thread.
         mainThreadDispatcher = FindAnyObjectByType<UnityMainThreadDispatcher>();

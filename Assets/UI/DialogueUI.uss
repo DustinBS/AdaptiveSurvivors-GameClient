@@ -1,0 +1,81 @@
+/* GameClient/Assets/UI/DialogueUI.uss */
+
+/* The main container is positioned at the bottom of the screen. */
+.dialogue-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-direction: row; /* Aligns the dialogue panel and button container horizontally */
+    align-items: flex-end; /* Aligns items to the bottom */
+    padding: 20px;
+    /* This makes it ignore mouse clicks so you can't accidentally click the container */
+    picking-mode: Ignore;
+}
+
+/* Styles the main box where the dialogue text appears. */
+.dialogue-panel {
+    flex-grow: 1; /* Takes up most of the available space */
+    height: 150px;
+    padding: 20px;
+    background-color: rgba(20, 20, 20, 0.85);
+    border-color: rgb(150, 150, 150);
+    border-width: 2px;
+    border-radius: 10px;
+    margin-right: 20px;
+}
+
+/* Styles the text inside the dialogue box. */
+.dialogue-text {
+    color: white;
+    font-size: 20px;
+    white-space: normal; /* Allows text to wrap to the next line */
+    -unity-font-style: italic;
+}
+
+/* Styles the small label that shows the NPC's name. */
+.speaker-label {
+    position: absolute;
+    top: -30px; /* Positions it just above the dialogue panel */
+    left: 20px;
+    padding: 5px 15px;
+    background-color: rgb(20, 20, 20);
+    color: rgb(255, 220, 100); /* A golden color for emphasis */
+    -unity-font-style: bold;
+    font-size: 22px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-color: rgb(150, 150, 150);
+    border-width: 2px;
+    border-bottom-width: 0;
+}
+
+/* Styles the container that will hold the choice buttons. */
+.choice-button-container {
+    flex-direction: column; /* Stacks buttons vertically */
+    width: 200px;
+}
+
+/* A generic style for all dialogue choice buttons. */
+.dialogue-choice-button {
+    height: 45px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: white;
+    background-color: rgb(60, 60, 90); /* A bluish-purple color */
+    border-color: rgb(120, 120, 150);
+    border-width: 1px;
+    border-radius: 8px;
+    transition-property: background-color, translate;
+    transition-duration: 0.1s;
+}
+
+.dialogue-choice-button:hover {
+    background-color: rgb(80, 80, 120);
+    translate: 0 -2px;
+}
+
+.dialogue-choice-button:active {
+    background-color: rgb(50, 50, 80);
+    translate: 0 0;
+}

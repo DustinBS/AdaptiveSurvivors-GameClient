@@ -37,7 +37,7 @@ public class EnemyHealth : MonoBehaviour
 
     void Awake()
     {
-        kafkaClient = FindAnyObjectByType<KafkaClient>();
+        kafkaClient = KafkaClient.Instance;
         if (kafkaClient == null)
         {
             Debug.LogError("EnemyHealth: KafkaClient not found in the scene.", this);

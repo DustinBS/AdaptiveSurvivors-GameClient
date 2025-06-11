@@ -1,0 +1,26 @@
+<!-- GameClient/Assets/UI/DialogueUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- 
+        The root container for the dialogue system. It will be hidden/shown by the DialogueManager.
+        It's positioned at the bottom of the screen.
+    -->
+    <ui:VisualElement name="DialogueContainer" class="dialogue-container">
+
+        <!-- A small label at the top-left to show who is speaking. -->
+        <ui:Label name="SpeakerLabel" text="NPC Name" class="speaker-label" />
+
+        <!-- 
+            The main panel that contains the dialogue text. The typewriter effect will happen here.
+        -->
+        <ui:VisualElement name="DialoguePanel" class="dialogue-panel">
+            <ui:Label name="DialogueText" text="This is where the dialogue will appear, one character at a time..." class="dialogue-text" />
+        </ui:VisualElement>
+
+        <!-- 
+            A container on the right for choice buttons. Buttons will be added here
+            by the C# script based on what the NPC offers.
+        -->
+        <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+
+    </ui:VisualElement>
+</ui:UXML>
