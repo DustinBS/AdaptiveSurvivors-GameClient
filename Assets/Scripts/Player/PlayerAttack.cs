@@ -1,74 +1,67 @@
 // GameClient/Assets/Scripts/Player/PlayerAttack.cs
 
 using UnityEngine;
-using UnityEngine.InputSystem; // Required for new Input System
 using System.Collections.Generic;
-using System.Linq;
 
-// This script manages the player's auto-attack mechanism.
-// It will periodically find and attack nearby enemies, sending weapon_hit_event to Kafka.
-// It assumes the presence of a KafkaClient in the scene and EnemyHealth components on enemies.
-
+/// <summary>
+/// Manages the player's auto-attack mechanism based on data from a WeaponData ScriptableObject.
+/// It periodically finds and attacks the nearest enemy, sending a 'weapon_hit_event' to Kafka.
+/// </summary>
 public class PlayerAttack : MonoBehaviour
 {
-    [Header("Attack Settings")]
-    [Tooltip("The time interval between attacks in seconds.")]
-    public float attackInterval = 1.0f;
+    [Header("Weapon Configuration")]
+    [Tooltip("The ScriptableObject that defines the properties of the currently equipped weapon.")]
+    public WeaponData currentWeapon;
 
-    [Tooltip("The range within which the player can detect and attack enemies.")]
-    public float attackRange = 5.0f;
+    [Header("Dependencies")]
+    [Tooltip("Unique identifier for the player. Should match other player scripts.")]
+    public string playerId = "player_001";
 
-    [Tooltip("The base damage dealt by the player's auto-attack.")]
-    public float baseDamage = 10f;
-
-    [Tooltip("The unique ID of this weapon (e.g., 'starting_sword', 'magic_wand').")]
-    public string weaponId = "player_auto_attack";
+    // Private fields to hold runtime stats derived from WeaponData
+    private float attackInterval;
+    private float attackRange;
+    private float baseDamage;
+    private float attackTimer;
 
     // Reference to the KafkaClient instance in the scene
     private KafkaClient kafkaClient;
 
-    // Player ID for Kafka events
-    [Tooltip("Unique identifier for this player.")]
-    public string playerId = "player_001"; // Should match PlayerMovement's ID
-
-    private float attackTimer;
-
-    // auto-attack for bullet-heaven roguelite.
-    private PlayerControls playerControls;
-
-
     void Awake()
     {
-        kafkaClient = FindAnyObjectByType<KafkaClient>();
+        kafkaClient = FindObjectOfType<KafkaClient>();
         if (kafkaClient == null)
         {
             Debug.LogError("PlayerAttack: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
             enabled = false;
+            return; // Stop execution if KafkaClient is missing
         }
 
-        playerControls = new PlayerControls();
-        // The Attack action is defined in PlayerControls, but its 'performed' and 'canceled' events
-        // are no longer directly subscribed here, as 'attackButtonPressed' is removed.
-        // If manual attack was desired, this logic would need to be reinstated and used in Update.
-
-        attackTimer = attackInterval; // Initialize timer to attack immediately on start
+        // Initialize attack properties from the ScriptableObject
+        if (currentWeapon != null)
+        {
+            InitializeWeaponStats();
+        }
+        else
+        {
+            Debug.LogError("PlayerAttack: No WeaponData assigned. Please assign a WeaponData asset in the Inspector.", this);
+            enabled = false;
+        }
     }
 
-    void OnEnable()
+    /// <summary>
+    /// Sets the component's internal stats from the assigned WeaponData asset.
+    /// This allows for stats to be changed at runtime by swapping WeaponData assets if needed.
+    /// </summary>
+    public void InitializeWeaponStats()
     {
-        playerControls.Enable(); // Enable the input action map
-    }
-
-    void OnDisable()
-    {
-        playerControls.Disable(); // Disable the input action map
+        attackInterval = currentWeapon.attackInterval;
+        attackRange = currentWeapon.attackRange;
+        baseDamage = currentWeapon.baseDamage;
+        attackTimer = attackInterval; // Set timer to attack immediately on start
     }
 
     void Update()
     {
-        // For "bullet-heaven roguelite" typically means auto-fire, so timer drives it.
-        // The `attackButtonPressed` flag was removed as it was not being utilized for gameplay logic
-        // and the primary design is auto-attack.
         attackTimer -= Time.deltaTime;
 
         if (attackTimer <= 0)
@@ -83,27 +76,19 @@ public class PlayerAttack : MonoBehaviour
     /// </summary>
     private void PerformAttack()
     {
-        // Step 1: Find the nearest enemy within attack range.
         GameObject nearestEnemy = FindNearestEnemy();
 
         if (nearestEnemy != null)
         {
-            // Step 2: Get the EnemyHealth component from the target.
             EnemyHealth enemyHealth = nearestEnemy.GetComponent<EnemyHealth>();
             if (enemyHealth != null)
             {
-                // Step 3: Apply damage to the enemy.
+                // For now, damage is simple. This could be expanded with critical hits, etc.
                 float actualDamageDealt = baseDamage;
-                enemyHealth.TakeDamage(actualDamageDealt, "player_attack");
+                enemyHealth.TakeDamage(actualDamageDealt, currentWeapon.weaponID);
 
-                // Step 4: Send weapon_hit_event to Kafka.
+                // Send the event to Kafka
                 SendWeaponHitEvent(actualDamageDealt, enemyHealth.EnemyId);
-
-                // Commented Debug.Log($"Player attacked enemy '{enemyHealth.EnemyId}' dealing {actualDamageDealt} damage.");
-            }
-            else
-            {
-                Debug.LogWarning($"PlayerAttack: Found enemy '{nearestEnemy.name}' but no EnemyHealth component.", nearestEnemy);
             }
         }
     }
@@ -118,14 +103,14 @@ public class PlayerAttack : MonoBehaviour
         if (enemies.Length == 0) return null;
 
         GameObject nearest = null;
-        float minDistance = float.MaxValue;
+        float minDistanceSqr = attackRange * attackRange; // Use squared distance for efficiency
 
         foreach (GameObject enemy in enemies)
         {
-            float distance = Vector2.Distance(transform.position, enemy.transform.position);
-            if (distance <= attackRange && distance < minDistance)
+            float distanceSqr = (enemy.transform.position - transform.position).sqrMagnitude;
+            if (distanceSqr < minDistanceSqr)
             {
-                minDistance = distance;
+                minDistanceSqr = distanceSqr;
                 nearest = enemy;
             }
         }
@@ -141,7 +126,7 @@ public class PlayerAttack : MonoBehaviour
     {
         var payload = new Dictionary<string, object>
         {
-            { "weapon_id", weaponId },
+            { "weapon_id", currentWeapon.weaponID },
             { "dmg_dealt", dmgDealt },
             { "enemy_id", enemyId }
         };

@@ -1,107 +1,114 @@
 // GameClient/Assets/Scripts/Enemy/EnemyHealth.cs
 
 using UnityEngine;
-using System.Collections.Generic; // For Dictionary
-using System; // For Action delegate
+using System.Collections.Generic;
+using System;
 
-// This script manages the health of an enemy.
-// It also sends damage_taken_event and enemy_death_event to Kafka.
-// Attach this script to any enemy GameObject.
-
+/// <summary>
+/// Manages the health and identity of an enemy. Its stats are initialized from an EnemyData ScriptableObject.
+/// It sends 'damage_taken_event' and 'enemy_death_event' to Kafka and fires a C# event on death.
+/// </summary>
 public class EnemyHealth : MonoBehaviour
 {
-    [Header("Enemy Settings")]
+    [Header("Runtime Enemy Stats")]
     [Tooltip("Unique identifier for this enemy instance.")]
-    public string EnemyId = "enemy_001"; // Assign a unique ID per enemy instance
+    public string EnemyId;
 
     [Tooltip("The type of this enemy (e.g., 'basic_grunt', 'adaptive_elite').")]
-    public string EnemyType = "basic_grunt";
+    public string EnemyType;
 
     [Tooltip("The current health of the enemy.")]
     public float currentHealth;
 
-    [Tooltip("The maximum health of the enemy.")]
-    public float maxHealth = 100f;
+    [Tooltip("The maximum health of the enemy, set at initialization.")]
+    public float maxHealth;
+
+    [Tooltip("The XP value granted on death, set at initialization.")]
+    public float xpValue;
 
     // Reference to the KafkaClient instance in the scene
     private KafkaClient kafkaClient;
 
-    // Player ID to associate with Kafka events (e.g., who dealt the damage/killed)
-    [Tooltip("ID of the player interacting with this enemy (usually the main player).")]
-    public string playerId = "player_001"; // Should match the main player's ID
+    // The player ID is needed for associating events in the backend.
+    private string playerId = "player_001"; // This can be set by the spawner or a GameManager
 
-    // Event fired when an enemy dies, allowing other scripts to subscribe (e.g., PlayerExperience to gain XP)
-    public static event Action<string, string> OnEnemyDeath; // EnemyId, EnemyType
+    /// <summary>
+    /// Event fired when an enemy dies.
+    /// Parameters: EnemyId (string), EnemyType (string), XP Value (float)
+    /// </summary>
+    public static event Action<string, string, float> OnEnemyDeath;
 
     void Awake()
     {
-        currentHealth = maxHealth;
-
-        // Updated to use FindAnyObjectByType to resolve deprecation warning
-        kafkaClient = FindAnyObjectByType<KafkaClient>();
+        kafkaClient = FindObjectOfType<KafkaClient>();
         if (kafkaClient == null)
         {
-            Debug.LogError("EnemyHealth: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
+            Debug.LogError("EnemyHealth: KafkaClient not found in the scene.", this);
             enabled = false;
         }
 
-        // Assign a unique ID if not set in inspector
-        if (string.IsNullOrEmpty(EnemyId) || EnemyId == "enemy_001")
-        {
-            EnemyId = "enemy_" + GetInstanceID(); // Simple unique ID based on instance
-        }
+        // A unique runtime ID is assigned to distinguish this specific instance from others of the same type.
+        EnemyId = $"enemy_{GetInstanceID()}";
+    }
+
+    /// <summary>
+    /// Initializes the enemy's stats from an EnemyData ScriptableObject.
+    /// This method should be called by the EnemySpawner immediately after instantiation.
+    /// </summary>
+    /// <param name="data">The EnemyData asset defining this enemy.</param>
+    public void Initialize(EnemyData data)
+    {
+        EnemyType = data.enemyID; // Use the scriptable object's ID as the type
+        maxHealth = data.maxHealth;
+        currentHealth = data.maxHealth;
+        xpValue = data.xpValue;
     }
 
     /// <summary>
     /// Reduces the enemy's health and sends a damage_taken_event to Kafka.
     /// </summary>
     /// <param name="amount">The amount of damage to take.</param>
-    /// <param name="sourceType">The source of the damage (e.g., 'player_attack', 'environment').</param>
-    public void TakeDamage(float amount, string sourceType)
+    /// <param name="sourceWeaponId">The ID of the weapon that dealt the damage.</param>
+    public void TakeDamage(float amount, string sourceWeaponId)
     {
-        if (!enabled) return; // Don't take damage if script is disabled
+        if (!enabled) return;
 
         currentHealth -= amount;
-        // Commented Debug.Log($"{gameObject.name} ({EnemyId}) took {amount} damage. Current Health: {currentHealth}");
 
-        // Send damage_taken_event to Kafka
-        SendDamageTakenEvent(amount, sourceType);
+        SendDamageTakenEvent(amount, sourceWeaponId);
 
         if (currentHealth <= 0)
         {
-            Die();
+            Die(sourceWeaponId);
         }
     }
 
     /// <summary>
-    /// Handles enemy death: sends enemy_death_event to Kafka and destroys the GameObject.
+    /// Handles enemy death: sends enemy_death_event, invokes the C# event, and destroys the GameObject.
     /// </summary>
-    private void Die()
+    /// <param name="killingWeaponId">The ID of the weapon that delivered the final blow.</param>
+    private void Die(string killingWeaponId)
     {
-        // Commented Debug.Log($"{gameObject.name} ({EnemyId}) died!");
+        SendEnemyDeathEvent(killingWeaponId);
 
-        // Send enemy_death_event to Kafka
-        SendEnemyDeathEvent();
+        // Invoke the static event for other systems (like PlayerExperience) to react to the death.
+        // We pass all relevant information.
+        OnEnemyDeath?.Invoke(EnemyId, EnemyType, xpValue);
 
-        // Invoke the OnEnemyDeath event so other scripts (like PlayerExperience) can react
-        OnEnemyDeath?.Invoke(EnemyId, EnemyType);
-
-        // In a real game, you might play death animations, drop loot, etc.
+        // In a real game, you might pool this object instead of destroying it.
         Destroy(gameObject);
     }
 
     /// <summary>
     /// Sends a damage_taken_event to Kafka.
     /// </summary>
-    /// <param name="dmgAmount">The amount of damage taken.</param>
-    /// <param name="sourceType">The type of source that dealt the damage.</param>
-    private void SendDamageTakenEvent(float dmgAmount, string sourceType)
+    private void SendDamageTakenEvent(float dmgAmount, string weaponId)
     {
         var payload = new Dictionary<string, object>
         {
             { "dmg_amount", dmgAmount },
             { "enemy_id", EnemyId },
-            { "source_type", sourceType }
+            { "source_type", weaponId } // The GDD implies sourceType can be the weapon ID
         };
         kafkaClient.SendGameplayEvent("damage_taken_event", playerId, payload);
     }
@@ -109,18 +116,13 @@ public class EnemyHealth : MonoBehaviour
     /// <summary>
     /// Sends an enemy_death_event to Kafka.
     /// </summary>
-    private void SendEnemyDeathEvent()
+    private void SendEnemyDeathEvent(string killingWeaponId)
     {
-        // For simplicity, we'll assume the player's last hit killed the enemy.
-        // In a complex system, you might track the last attacker.
-        // Updated to use FindAnyObjectByType to resolve deprecation warning
-        string killedByWeaponId = FindAnyObjectByType<PlayerAttack>()?.weaponId ?? "unknown"; // Get player's weapon ID if available
-
         var payload = new Dictionary<string, object>
         {
             { "enemy_id", EnemyId },
             { "enemy_type", EnemyType },
-            { "killed_by_weapon_id", killedByWeaponId }
+            { "killed_by_weapon_id", killingWeaponId }
         };
         kafkaClient.SendGameplayEvent("enemy_death_event", playerId, payload);
     }
