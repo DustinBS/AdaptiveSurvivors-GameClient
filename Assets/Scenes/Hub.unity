@@ -171,7 +171,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8037015145504086183, guid: 43d387cc23ee821449fcce0cc4477844, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -208,6 +209,7 @@ MonoBehaviour:
   dialogueUIDocument: {fileID: 814026135}
   useDebugMode: 1
   cloudFunctionUrl: 
+  defaultPortrait: {fileID: -1556463978589607206, guid: 509e8e9f81098eb4eb8bd8d78a021431, type: 3}
 --- !u!4 &740382942
 Transform:
   m_ObjectHideFlags: 0
@@ -516,8 +518,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fa61a2bf9a24784a9fa6e5490afe6ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  npcName: Mysterious Stranger
-  npcPersonality: A wise and ancient sage who speaks in riddles.
+  npcData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
   supportedInteractions: 00000000
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

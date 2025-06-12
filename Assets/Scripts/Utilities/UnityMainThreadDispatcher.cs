@@ -1,49 +1,58 @@
-// --- UnityMainThreadDispatcher ---
-// Assets/Scripts/Utilities/UnityMainThreadDispatcher.cs
-// A simple helper to dispatch actions to the Unity main thread from background threads.
-// This is necessary because most Unity API calls (e.g., Debug.Log, GameObject.Instantiate)
-// must be made from the main thread.
+// GameClient/Assets/Scripts/Utilities/UnityMainThreadDispatcher.cs
+
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
-// NOTE: This UnityMainThreadDispatcher is now updated to use FindAnyObjectByType to resolve the deprecation warning.
+/// <summary>
+/// A helper to dispatch actions to the Unity main thread from background threads.
+/// This component's persistence is managed by its parent GameObject (_PersistentManagers).
+/// </summary>
 public class UnityMainThreadDispatcher : MonoBehaviour
 {
-    private static UnityMainThreadDispatcher _instance;
-    private readonly System.Collections.Generic.Queue<Action> _executionQueue = new System.Collections.Generic.Queue<Action>();
+    // A thread-safe queue for actions that need to run on the main thread.
+    private readonly Queue<Action> executionQueue = new Queue<Action>();
 
-    public static UnityMainThreadDispatcher Instance()
+    // This is no longer a full singleton but is still easily accessible.
+    // It assumes it will be available on the persistent manager object.
+    public static UnityMainThreadDispatcher Instance { get; private set; }
+
+    void Awake()
     {
-        if (_instance == null)
+        // Simple singleton assignment. The PersistentManagers script ensures only one instance exists.
+        if (Instance == null)
         {
-            // Using FindAnyObjectByType to resolve the deprecation warning
-            _instance = FindAnyObjectByType<UnityMainThreadDispatcher>();
-            if (_instance == null)
-            {
-                GameObject obj = new GameObject("UnityMainThreadDispatcher");
-                _instance = obj.AddComponent<UnityMainThreadDispatcher>();
-                DontDestroyOnLoad(obj);
-            }
+            Instance = this;
         }
-        return _instance;
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     void Update()
     {
-        lock (_executionQueue)
+        // Lock the queue to prevent other threads from modifying it while we process it.
+        lock (executionQueue)
         {
-            while (_executionQueue.Count > 0)
+            while (executionQueue.Count > 0)
             {
-                _executionQueue.Dequeue().Invoke();
+                // Dequeue and invoke the action on the main thread.
+                executionQueue.Dequeue().Invoke();
             }
         }
     }
 
+    /// <summary>
+    /// Enqueues an action to be executed on the main thread.
+    /// This method is thread-safe.
+    /// </summary>
+    /// <param name="action">The action to be executed.</param>
     public void Enqueue(Action action)
     {
-        lock (_executionQueue)
+        lock (executionQueue)
         {
-            _executionQueue.Enqueue(action);
+            executionQueue.Enqueue(action);
         }
     }
 }

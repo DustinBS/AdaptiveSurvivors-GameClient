@@ -1,81 +1,105 @@
 /* GameClient/Assets/UI/DialogueUI.uss */
 
-/* The main container is positioned at the bottom of the screen. */
+/* The root container that holds everything, positioned at the bottom. */
 .dialogue-container {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    flex-direction: row; /* Aligns the dialogue panel and button container horizontally */
-    align-items: flex-end; /* Aligns items to the bottom */
-    padding: 20px;
-    /* This makes it ignore mouse clicks so you can't accidentally click the container */
-    picking-mode: Ignore;
+    height: 25%; /* Takes up the bottom quarter of the screen */
+    flex-direction: row;
+    align-items: flex-end; /* Aligns portraits to the bottom */
+    padding: 0 20px;
 }
 
-/* Styles the main box where the dialogue text appears. */
-.dialogue-panel {
-    flex-grow: 1; /* Takes up most of the available space */
-    height: 150px;
-    padding: 20px;
-    background-color: rgba(20, 20, 20, 0.85);
+/* Base style for both portraits */
+.portrait {
+    width: 20%; /* Relative width */
+    max-width: 300px;
+    height: 100%;
+    -unity-background-scale-mode: scale-and-crop;
+    /* Smooth transition for the dimming effect */
+    transition-property: unity-background-image-tint-color;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-out;
+}
+
+/* Class applied by C# to dim an inactive speaker's portrait */
+.inactive-speaker {
+    unity-background-image-tint-color: rgb(80, 80, 80);
+}
+
+/* The main dialogue box, absolutely positioned to overlap the center */
+.dialogue-box {
+    position: absolute;
+    left: 15%;
+    right: 15%;
+    bottom: 10px;
+    height: 85%;
+    background-color: rgba(20, 20, 20, 0.9);
     border-color: rgb(150, 150, 150);
     border-width: 2px;
     border-radius: 10px;
-    margin-right: 20px;
+    padding: 10px 20px;
 }
 
-/* Styles the text inside the dialogue box. */
-.dialogue-text {
-    color: white;
-    font-size: 20px;
-    white-space: normal; /* Allows text to wrap to the next line */
-    -unity-font-style: italic;
-}
-
-/* Styles the small label that shows the NPC's name. */
+/* Base style for speaker name labels */
 .speaker-label {
     position: absolute;
-    top: -30px; /* Positions it just above the dialogue panel */
-    left: 20px;
-    padding: 5px 15px;
+    top: -30px;
+    padding: 5px 20px;
     background-color: rgb(20, 20, 20);
-    color: rgb(255, 220, 100); /* A golden color for emphasis */
+    color: rgb(255, 220, 100);
     -unity-font-style: bold;
     font-size: 22px;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
-    border-color: rgb(150, 150, 150);
     border-width: 2px;
     border-bottom-width: 0;
+    border-color: rgb(150, 150, 150);
+    /* Hide by default, C# will show the correct one */
+    display: none;
 }
 
-/* Styles the container that will hold the choice buttons. */
-.choice-button-container {
-    flex-direction: column; /* Stacks buttons vertically */
-    width: 200px;
+/* Positions the player's name on the left */
+.player-speaker {
+    left: 10px;
 }
 
-/* A generic style for all dialogue choice buttons. */
-.dialogue-choice-button {
-    height: 45px;
-    font-size: 18px;
-    margin-bottom: 10px;
+/* Positions the NPC's name on the right */
+.npc-speaker {
+    right: 10px;
+}
+
+/* Main dialogue text styling */
+.dialogue-text {
     color: white;
-    background-color: rgb(60, 60, 90); /* A bluish-purple color */
-    border-color: rgb(120, 120, 150);
-    border-width: 1px;
-    border-radius: 8px;
-    transition-property: background-color, translate;
-    transition-duration: 0.1s;
+    font-size: 22px;
+    white-space: normal;
+    -unity-font-style: normal;
+    margin-top: 15px; /* Add space below the speaker name */
+    height: 60%; /* Reserve space for choice buttons below */
+}
+
+/* Container for player choice buttons */
+.choice-button-container {
+    flex-grow: 1;
+    justify-content: flex-end; /* Aligns buttons to the bottom of their container */
+    padding-bottom: 5px;
+}
+
+/* Style for individual choice buttons */
+.dialogue-choice-button {
+    font-size: 18px;
+    margin: 5px 0;
+    color: white;
+    background-color: rgba(60, 60, 90, 0.7);
+    border-left-color: rgb(120, 120, 150);
+    border-right-color: rgb(120, 120, 150);
+    border-top-color: rgb(120, 120, 150);
+    border-bottom-color: rgb(120, 120, 150);
 }
 
 .dialogue-choice-button:hover {
-    background-color: rgb(80, 80, 120);
-    translate: 0 -2px;
-}
-
-.dialogue-choice-button:active {
-    background-color: rgb(50, 50, 80);
-    translate: 0 0;
+    background-color: rgba(80, 80, 120, 0.9);
 }

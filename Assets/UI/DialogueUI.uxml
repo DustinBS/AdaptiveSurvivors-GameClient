@@ -1,26 +1,33 @@
 <!-- GameClient/Assets/UI/DialogueUI.uxml -->
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <!-- 
-        The root container for the dialogue system. It will be hidden/shown by the DialogueManager.
-        It's positioned at the bottom of the screen.
-    -->
+    <!-- The main container for the entire dialogue system at the bottom of the screen. -->
     <ui:VisualElement name="DialogueContainer" class="dialogue-container">
 
-        <!-- A small label at the top-left to show who is speaking. -->
-        <ui:Label name="SpeakerLabel" text="NPC Name" class="speaker-label" />
+        <!-- Player's portrait on the left -->
+        <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" />
 
-        <!-- 
-            The main panel that contains the dialogue text. The typewriter effect will happen here.
+        <!-- A flexible space to push the NPC portrait to the right -->
+        <ui:VisualElement style="flex-grow: 1;" />
+
+        <!-- NPC's portrait on the right -->
+        <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" />
+
+        <!--
+            This is an overlay container that holds the dialogue box itself.
+            It's positioned absolutely to sit in the middle, over the portraits.
         -->
-        <ui:VisualElement name="DialoguePanel" class="dialogue-panel">
-            <ui:Label name="DialogueText" text="This is where the dialogue will appear, one character at a time..." class="dialogue-text" />
+        <ui:VisualElement name="DialogueBox" class="dialogue-box">
+
+            <!-- Speaker labels, absolutely positioned within the dialogue box -->
+            <ui:Label name="PlayerSpeakerLabel" text="Player" class="speaker-label player-speaker" />
+            <ui:Label name="NPCSpeakerLabel" text="NPC Name" class="speaker-label npc-speaker" />
+
+            <!-- The main text content -->
+            <ui:Label name="DialogueText" text="..." class="dialogue-text" />
+
+            <!-- A container for player response buttons -->
+            <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
         </ui:VisualElement>
-
-        <!-- 
-            A container on the right for choice buttons. Buttons will be added here
-            by the C# script based on what the NPC offers.
-        -->
-        <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
 
     </ui:VisualElement>
 </ui:UXML>

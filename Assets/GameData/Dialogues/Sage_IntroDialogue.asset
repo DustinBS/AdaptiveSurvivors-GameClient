@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7148c4b204d55ff41a559b0514f7fa92, type: 3}
+  m_Name: Sage_IntroDialogue
+  m_EditorClassIdentifier: 
+  lines:
+  - speaker: 1
+    speakerData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
+    text: Long have I watched the tides of this realm, from the whispering winds
+      to the echoes of forgotten battles.
+    isLLMGenerated: 0
+    playerResponses: []
+  - speaker: 1
+    speakerData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
+    text: 
+    isLLMGenerated: 1
+    playerResponses: []
+  - speaker: 1
+    speakerData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
+    text: What trials have brought you to my quiet abode, seeker?
+    isLLMGenerated: 0
+    playerResponses: []
+  - speaker: 0
+    speakerData: {fileID: 0}
+    text: 
+    isLLMGenerated: 0
+    playerResponses:
+    - responseText: I just happened upon this place.
+      nextDialogue: {fileID: 0}
+    - responseText: I must depart.
+      nextDialogue: {fileID: 0}

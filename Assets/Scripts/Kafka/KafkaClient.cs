@@ -5,83 +5,90 @@ using System;
 using System.Threading;
 using Confluent.Kafka;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
-// This script handles Kafka communication for the Unity game client.
-// It acts as both a producer for gameplay events and a consumer for adaptive parameters.
-// Ensure you have the Confluent.Kafka .NET client library integrated into your Unity project.
-// You might need to build it for .NET Standard 2.0 or find a compatible Unity package.
-// Also, ensure Newtonsoft.Json-for-Unity is installed for JSON serialization/deserialization.
-
+/// <summary>
+/// Persistent global service for Kafka communication.
+/// Its persistence is managed by the PersistentManagers prefab.
+/// </summary>
 public class KafkaClient : MonoBehaviour
 {
-    public static KafkaClient Instance { get; private set; } // Add a static instance for easy access
+    // --- Public Instance ---
+    // Global access to the single KafkaClient instance.
+    public static KafkaClient Instance { get; private set; }
 
     [Header("Kafka Settings")]
     [Tooltip("Comma-separated list of Kafka broker addresses (e.g., 'localhost:29092')")]
     public string bootstrapServers = "localhost:29092";
-
     [Tooltip("Topic to send gameplay events to")]
     public string gameplayEventsTopic = "gameplay_events";
-
     [Tooltip("Topic to consume adaptive parameters from")]
     public string adaptiveParamsTopic = "adaptive_params";
-
     [Tooltip("Consumer group ID for adaptive parameters")]
     public string consumerGroupId = "unity_game_client";
 
     // Kafka Producer and Consumer instances
     private IProducer<string, string> producer;
     private IConsumer<string, string> consumer;
+
+    // Cached reference to UnityMainThreadDispatcher for thread-safe main thread operations.
     private UnityMainThreadDispatcher mainThreadDispatcher;
 
-    // Thread for background consumption to avoid blocking the main Unity thread
+    // Cancellation token and thread for background Kafka consumption.
     private CancellationTokenSource consumeCancellationTokenSource;
     private Thread consumerThread;
 
-    // Delegate for events received from Kafka
+    // Event for external subscribers to receive adaptive parameters.
     public delegate void OnAdaptiveParametersReceived(AdaptiveParameters parameters);
     public static event OnAdaptiveParametersReceived onAdaptiveParametersReceived;
 
-    // JSON serialization settings (optional, for readability)
+    // JSON serialization settings for consistent and compact message formatting.
     private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
     {
         NullValueHandling = NullValueHandling.Ignore,
-        Formatting = Formatting.None // Compact JSON
+        Formatting = Formatting.None
     };
 
+    /// <summary>
+    /// Sets up the singleton instance and initializes Kafka clients.
+    /// </summary>
     void Awake()
     {
-        if (Instance != null && Instance != this)
+        // Enforce singleton. Destroy this if another instance exists.
+        if (Instance != null)
         {
-            Destroy(gameObject); // Destroy duplicate instances
+            Debug.LogWarning("KafkaClient: Duplicate instance found. Destroying this GameObject.");
+            Destroy(gameObject);
+            return;
         }
-        else
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject); // Make this GameObject persist
-            Debug.Log("KafkaClient: Instance created and set to DontDestroyOnLoad.");
-        }
-        // Find the dispatcher on the main thread and cache it for later use.
-        // This is a safe operation because Awake() is always on the main thread.
+        Instance = this;
+        // Debug.Log("KafkaClient: Singleton instance assigned.");
+
+        // Cache UnityMainThreadDispatcher for thread-safe main thread access.
         mainThreadDispatcher = FindAnyObjectByType<UnityMainThreadDispatcher>();
         if (mainThreadDispatcher == null)
         {
-            Debug.LogError("KafkaClient: UnityMainThreadDispatcher not found in the scene! Messages from Kafka will not be processed.");
-            // Optionally disable the component if the dispatcher is essential
+            Debug.LogError("KafkaClient: UnityMainThreadDispatcher not found. Kafka messages cannot be processed on the main thread. Ensure it's in the PersistentManagers prefab.");
             enabled = false;
             return;
         }
+        // Persistence handled by parent PersistentManagers GameObject.
 
         InitializeProducer();
         InitializeConsumer();
     }
 
-
+    /// <summary>
+    /// Starts the background consumer thread when the object becomes enabled.
+    /// </summary>
     void OnEnable()
     {
         StartConsumerThread();
     }
 
+    /// <summary>
+    /// Stops the consumer thread and cleans up Kafka clients when the object is disabled or destroyed.
+    /// </summary>
     void OnDisable()
     {
         StopConsumerThread();
@@ -89,40 +96,25 @@ public class KafkaClient : MonoBehaviour
     }
 
     /// <summary>
-    /// Initializes the Kafka Producer with detailed internal logging enabled for diagnostics.
+    /// Initializes the Kafka Producer.
     /// </summary>
     private void InitializeProducer()
     {
         var config = new ProducerConfig
         {
             BootstrapServers = bootstrapServers,
-            // Enable all client-level debugging messages from the underlying librdkafka library.
-            // This is the key change for diagnosing the silent network issue.
-            Debug = "all"
         };
 
         try
         {
             var producerBuilder = new ProducerBuilder<string, string>(config);
-
-            // Set a log handler to redirect the internal librdkafka logs to the Unity console.
-            producerBuilder.SetLogHandler((_, logMessage) =>
-            {
-                // This callback will be invoked for each internal log message from the client.
-                // We can now see connection attempts, failures, and other network-level details.
-                // Note: This logs from a background thread. Debug.Log is thread-safe.
-                // Commented Debug.Log($"[KafkaClient-Internal] {logMessage.Level} | {logMessage.Facility}: {logMessage.Message}");
-            });
-
             producer = producerBuilder.Build();
-            // Commented Debug.Log($"Kafka Producer initialized successfully for topic: {gameplayEventsTopic}");
         }
         catch (Exception e)
         {
             Debug.LogError($"Failed to initialize Kafka Producer: {e.Message}");
         }
     }
-
 
     /// <summary>
     /// Initializes the Kafka Consumer.
@@ -133,14 +125,14 @@ public class KafkaClient : MonoBehaviour
         {
             BootstrapServers = bootstrapServers,
             GroupId = consumerGroupId,
-            AutoOffsetReset = AutoOffsetReset.Latest // Start consuming from the latest message
+            AutoOffsetReset = AutoOffsetReset.Latest,
         };
 
         try
         {
-            consumer = new ConsumerBuilder<string, string>(config).Build();
+            var consumerBuilder = new ConsumerBuilder<string, string>(config);
+            consumer = consumerBuilder.Build();
             consumer.Subscribe(adaptiveParamsTopic);
-            // Commented Debug.Log($"Kafka Consumer initialized and subscribed to topic: {adaptiveParamsTopic}");
         }
         catch (Exception e)
         {
@@ -149,10 +141,8 @@ public class KafkaClient : MonoBehaviour
     }
 
     /// <summary>
-    /// Starts a background thread for Kafka message consumption.
-    /// This prevents blocking the main Unity thread.
+    /// Starts a background thread for Kafka message consumption, preventing main thread blocking.
     /// </summary>
-    /// <param name="cancellationToken">Token to signal cancellation of the thread.</param>
     private void StartConsumerThread()
     {
         if (consumer == null)
@@ -161,17 +151,18 @@ public class KafkaClient : MonoBehaviour
             return;
         }
 
+        StopConsumerThread(); // Safely stop any existing thread before starting a new one.
+
         consumeCancellationTokenSource = new CancellationTokenSource();
         consumerThread = new Thread(() => ConsumeMessages(consumeCancellationTokenSource.Token));
-        consumerThread.IsBackground = true; // Allow the application to exit even if thread is running
+        consumerThread.IsBackground = true;
         consumerThread.Start();
-        // Commented Debug.Log("Kafka Consumer thread started.");
     }
 
     /// <summary>
-    /// Consumes messages from Kafka in a background thread.
+    /// Consumes Kafka messages in a background thread, enqueuing them to the main thread for processing.
     /// </summary>
-    /// <param name="cancellationToken">Token to signal cancellation of the thread.</param>
+    /// <param name="cancellationToken">Token to signal cancellation.</param>
     private void ConsumeMessages(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -182,33 +173,34 @@ public class KafkaClient : MonoBehaviour
                 if (consumeResult != null && consumeResult.Message != null)
                 {
                     string message = consumeResult.Message.Value;
-                    // Commented Debug.Log($"Consumed message from Kafka: {message}");
+                    // Debug.Log($"Consumed message from Kafka topic '{consumeResult.Topic}': {message}");
 
-                    // Use the PRE-CACHED reference to the dispatcher.
-                    // This avoids calling .Instance() and searching from the background thread.
+                    // Enqueue message processing to the main thread via the cached dispatcher.
                     if (mainThreadDispatcher != null)
                     {
                         mainThreadDispatcher.Enqueue(() => ProcessConsumedMessage(message));
+                    }
+                    else
+                    {
+                        Debug.LogWarning("KafkaClient: UnityMainThreadDispatcher is null in consumer thread. Message not processed on main thread.");
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                // Commented Debug.Log("Kafka Consumer thread cancelled.");
+                Debug.Log("Kafka Consumer thread cancellation requested. Exiting consumer loop.");
                 break;
             }
             catch (Exception e)
             {
                 Debug.LogError($"Error consuming Kafka message: {e.Message}");
-                Thread.Sleep(1000);
+                Thread.Sleep(1000); // Prevent busy loop on continuous errors.
             }
         }
     }
 
-
     /// <summary>
-    /// Processes a consumed Kafka message (deserializes and invokes event).
-    /// Executed on the Unity main thread.
+    /// Processes a consumed Kafka message (deserializes and invokes event) on the Unity main thread.
     /// </summary>
     /// <param name="message">The JSON string message from Kafka.</param>
     private void ProcessConsumedMessage(string message)
@@ -216,7 +208,7 @@ public class KafkaClient : MonoBehaviour
         try
         {
             AdaptiveParameters parameters = JsonConvert.DeserializeObject<AdaptiveParameters>(message);
-            onAdaptiveParametersReceived?.Invoke(parameters); // Invoke the event for subscribers
+            onAdaptiveParametersReceived?.Invoke(parameters);
         }
         catch (Exception e)
         {
@@ -225,54 +217,58 @@ public class KafkaClient : MonoBehaviour
     }
 
     /// <summary>
-    /// Stops the Kafka consumer background thread.
+    /// Stops the Kafka consumer background thread gracefully.
     /// </summary>
     private void StopConsumerThread()
     {
         if (consumeCancellationTokenSource != null)
         {
             consumeCancellationTokenSource.Cancel();
-            // Commented Debug.Log("Signaled Kafka Consumer thread to stop.");
+            Debug.Log("Signaled Kafka Consumer thread to stop.");
         }
 
         if (consumerThread != null && consumerThread.IsAlive)
         {
-            consumerThread.Join(TimeSpan.FromSeconds(5)); // Wait for the thread to finish
+            consumerThread.Join(TimeSpan.FromSeconds(5)); // Wait for thread to finish.
             if (consumerThread.IsAlive)
             {
-                Debug.LogWarning("Kafka Consumer thread did not terminate gracefully.");
-                // Optionally, forcefully abort the thread if it's still alive (use with caution)
-                // consumerThread.Abort();
+                Debug.LogWarning("Kafka Consumer thread did not terminate gracefully within 5 seconds.");
             }
         }
+        consumeCancellationTokenSource?.Dispose();
+        consumeCancellationTokenSource = null;
+        consumerThread = null;
     }
 
     /// <summary>
-    /// Cleans up and disposes of Kafka producer and consumer clients.
+    /// Cleans up and disposes Kafka producer and consumer client resources.
     /// </summary>
     private void CleanUpKafkaClients()
     {
-        // Flush the producer to ensure all buffered messages are sent before exiting.
-        // A timeout is provided to prevent the application from hanging indefinitely.
         if (producer != null)
         {
-            // Commented Debug.Log("Flushing Kafka Producer...");
-            producer.Flush(TimeSpan.FromSeconds(10)); // Wait up to 10 seconds
-            // Commented Debug.Log("Kafka Producer flushed.");
+            Debug.Log("Waiting 10s for Kafka Producer to flush...");
+            producer.Flush(TimeSpan.FromSeconds(10)); // Wait for messages to be sent.
+            Debug.Log("Kafka Producer flushed.");
             producer.Dispose();
+            producer = null;
         }
 
-        consumer?.Dispose();
-        // Commented Debug.Log("Kafka Producer and Consumer disposed.");
+        if (consumer != null)
+        {
+            consumer.Dispose();
+            consumer = null;
+        }
+        Debug.Log("Kafka Producer and Consumer disposed.");
     }
 
     /// <summary>
-    /// Sends a gameplay event to Kafka using a callback handler for reliability.
+    /// Sends a gameplay event to Kafka with a delivery report callback for reliability.
     /// </summary>
     /// <param name="eventType">Type of the event (e.g., "player_movement_event").</param>
     /// <param name="playerId">ID of the player.</param>
     /// <param name="payload">Dictionary of event-specific data.</param>
-    public void SendGameplayEvent(string eventType, string playerId, System.Collections.Generic.Dictionary<string, object> payload)
+    public void SendGameplayEvent(string eventType, string playerId, Dictionary<string, object> payload)
     {
         if (producer == null)
         {
@@ -289,53 +285,50 @@ public class KafkaClient : MonoBehaviour
         };
 
         string jsonMessage = JsonConvert.SerializeObject(gameplayEvent, JsonSettings);
+        // Debug.Log($"Attempting to produce event '{eventType}' with payload: {jsonMessage}");
 
         try
         {
-            // Commented Debug.Log($"Attempting to produce event '{eventType}' with payload: {jsonMessage}");
-
-            // Use the Produce method with a delivery handler callback.
-            // This avoids the complexities and silent failures of 'async void' in Unity.
             producer.Produce(gameplayEventsTopic, new Message<string, string> { Key = playerId, Value = jsonMessage },
                 (deliveryReport) =>
                 {
-                    // This callback executes on a background thread from the Kafka client.
+                    // Callback executes on a background thread.
                     if (deliveryReport.Error.Code != ErrorCode.NoError)
                     {
-                        // Debug.LogError($"[Kafka] Delivery failed for topic {deliveryReport.Topic}: {deliveryReport.Error.Reason}");
+                        Debug.LogError($"[Kafka] Delivery failed for topic {deliveryReport.Topic}: {deliveryReport.Error.Reason} (Code: {deliveryReport.Error.Code})");
                     }
                     else
                     {
-                        // Commented Debug.Log($"[Kafka] Delivered message to {deliveryReport.TopicPartitionOffset}");
+                        // Debug.Log($"[Kafka] Delivered message to {deliveryReport.TopicPartitionOffset}");
                     }
                 });
         }
         catch (Exception e)
         {
-            // This will catch immediate errors, like the producer's internal queue being full.
             Debug.LogError($"[Kafka] Error on calling Produce: {e.Message}");
         }
     }
 
     // --- Data Models (Mirroring Flink Job's data models) ---
+    // These classes define the structure of data sent to and received from Kafka.
 
-    [Serializable]
+    [System.Serializable]
     public class GameplayEvent
     {
         public string event_type;
         public long timestamp;
         public string player_id;
-        public System.Collections.Generic.Dictionary<string, object> payload;
+        public Dictionary<string, object> payload;
     }
 
-    [Serializable]
+    [System.Serializable]
     public class AdaptiveParameters
     {
         public string playerId;
-        public System.Collections.Generic.Dictionary<string, double> enemyResistances;
+        public Dictionary<string, double> enemyResistances;
         public string eliteBehaviorShift;
-        public System.Collections.Generic.HashSet<string> eliteStatusImmunities; // Using HashSet for sets
-        public System.Collections.Generic.Dictionary<string, string> breakableObjectBuffsDebuffs;
+        public HashSet<string> eliteStatusImmunities;
+        public Dictionary<string, string> breakableObjectBuffsDebuffs;
         public long timestamp;
     }
 }

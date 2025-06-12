@@ -4,26 +4,28 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Controls the behavior of a single Non-Player Character (NPC).
-/// It implements the IInteractable interface, allowing the player to initiate dialogue.
-/// This component holds all data relevant to the NPC and their available interactions.
+/// Controls a single Non-Player Character (NPC) instance in the scene.
+/// It uses an NPCScriptableObject for its core data and now holds a reference
+/// to a DialogueData asset to kick off a conversation.
 /// </summary>
 public class NPCController : MonoBehaviour, IInteractable
 {
-    [Header("NPC Details")]
-    [Tooltip("The display name of the NPC.")]
-    public string npcName = "Mysterious Stranger";
+    [Header("NPC Configuration")]
+    [Tooltip("The ScriptableObject asset that defines this NPC's static properties like name and portrait.")]
+    public NPCData npcData;
 
-    [Tooltip("A description of the NPC's personality, used to prime the LLM for dialogue generation.")]
-    [TextArea(2, 4)]
-    public string npcPersonality = "A wise and ancient sage who speaks in riddles.";
+    [Header("Dialogue")]
+    [Tooltip("The starting DialogueData asset for when the player interacts with this NPC.")]
+    public DialogueData startingDialogue;
 
-    [Header("Supported Interactions")]
-    [Tooltip("The list of interaction types this NPC offers to the player.")]
-    public List<InteractionType> supportedInteractions = new List<InteractionType> { InteractionType.Chat };
+    // We no longer need the list of supported interactions here,
+    // as that will now be driven by the choices within the DialogueData assets themselves.
 
-    // This property allows other systems, like a UI prompt, to know what to display.
-    public string InteractionPrompt => $"Talk to {npcName}";
+    // Public properties to allow other systems (like the DialogueManager) to safely access the NPC's data.
+    public string NPCName => npcData != null ? npcData.npcName : "Unknown";
+    public string NPCPersonality => npcData != null ? npcData.npcPersonality : "A generic NPC.";
+    public Sprite NPCPortrait => npcData != null ? npcData.portraitSprite : null;
+
 
     /// <summary>
     /// This method is called from the PlayerInteraction script when the player
@@ -31,13 +33,14 @@ public class NPCController : MonoBehaviour, IInteractable
     /// </summary>
     public void Interact()
     {
-        Debug.Log($"Player interacted with {npcName}.");
+        if (startingDialogue == null)
+        {
+            Debug.LogError($"NPC '{NPCName}' has no starting dialogue assigned!", this);
+            return;
+        }
 
-        // The NPC's only job is to tell the DialogueManager to start a conversation,
-        // passing itself as the context. This keeps the NPC decoupled from the UI system.
-        DialogueManager.Instance.StartDialogue(this);
+        // The NPC's job is simply to tell the DialogueManager to start a specific conversation.
+        // This keeps the NPC completely decoupled from the UI and dialogue flow logic.
+        DialogueManager.Instance.StartConversation(startingDialogue, this);
     }
-
-    // To make this work, the NPC GameObject should have a Collider2D component
-    // so the PlayerInteraction script's trigger can detect it.
 }

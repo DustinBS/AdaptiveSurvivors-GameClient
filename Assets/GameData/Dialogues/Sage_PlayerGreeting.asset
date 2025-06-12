@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7148c4b204d55ff41a559b0514f7fa92, type: 3}
+  m_Name: Sage_PlayerGreeting
+  m_EditorClassIdentifier: 
+  lines:
+  - speaker: 1
+    speakerData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
+    text: Greetings, seeker. Your presence stirs the ancient dust of this realm.
+    isLLMGenerated: 0
+    playerResponses:
+    - responseText: Who are you, old one?
+      nextDialogue: {fileID: 11400000, guid: 9db8e9333fc47cc46a0216a0720d9942, type: 2}
+    - responseText: I seek wisdom.
+      nextDialogue: {fileID: 11400000, guid: f37ce4c7ff0dd504984f7927093877b8, type: 2}
