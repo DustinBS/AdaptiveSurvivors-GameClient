@@ -21,4 +21,4 @@ MonoBehaviour:
     - responseText: Who are you, old one?
       nextDialogue: {fileID: 11400000, guid: 9db8e9333fc47cc46a0216a0720d9942, type: 2}
     - responseText: I seek wisdom.
-      nextDialogue: {fileID: 11400000, guid: f37ce4c7ff0dd504984f7927093877b8, type: 2}
+      nextDialogue: {fileID: 11400000, guid: c39b1d2811f273a4cbd8e6b842e52d4b, type: 2}

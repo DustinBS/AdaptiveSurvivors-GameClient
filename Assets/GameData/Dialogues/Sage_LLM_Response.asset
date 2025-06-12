@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: Sage_LLM_Response
   m_EditorClassIdentifier: 
   lines:
-  - speaker: 0
-    speakerData: {fileID: 0}
+  - speaker: 1
+    speakerData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
     text: 
     isLLMGenerated: 1
-    playerResponses: []
+    playerResponses:
+    - responseText: Thank you.
+      nextDialogue: {fileID: 0}

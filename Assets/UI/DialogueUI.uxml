@@ -1,33 +1,13 @@
-<!-- GameClient/Assets/UI/DialogueUI.uxml -->
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <!-- The main container for the entire dialogue system at the bottom of the screen. -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <ui:VisualElement name="DialogueContainer" class="dialogue-container">
-
-        <!-- Player's portrait on the left -->
-        <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" />
-
-        <!-- A flexible space to push the NPC portrait to the right -->
+        <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" style="height: 90px; background-image: url(&quot;project://database/Assets/Sprites/Necromancer_creativekind-Sheet.png?fileID=-4549297002301125287&amp;guid=ebe36b10ffd7547418d970a219dc67b6&amp;type=3#Necromancer_creativekind-Sheet_1&quot;);" />
         <ui:VisualElement style="flex-grow: 1;" />
-
-        <!-- NPC's portrait on the right -->
-        <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" />
-
-        <!--
-            This is an overlay container that holds the dialogue box itself.
-            It's positioned absolutely to sit in the middle, over the portraits.
-        -->
+        <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" style="height: 78px; background-image: url(&quot;project://database/Assets/Sprites/portrait_mage_guardian-blue%201.png?fileID=-1556463978589607206&amp;guid=509e8e9f81098eb4eb8bd8d78a021431&amp;type=3#mage_guardian-blue_0&quot;);" />
         <ui:VisualElement name="DialogueBox" class="dialogue-box">
-
-            <!-- Speaker labels, absolutely positioned within the dialogue box -->
             <ui:Label name="PlayerSpeakerLabel" text="Player" class="speaker-label player-speaker" />
             <ui:Label name="NPCSpeakerLabel" text="NPC Name" class="speaker-label npc-speaker" />
-
-            <!-- The main text content -->
             <ui:Label name="DialogueText" text="..." class="dialogue-text" />
-
-            <!-- A container for player response buttons -->
             <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
         </ui:VisualElement>
-
     </ui:VisualElement>
 </ui:UXML>

@@ -207,6 +207,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dialogueUIDocument: {fileID: 814026135}
+  playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
   useDebugMode: 1
   cloudFunctionUrl: 
   defaultPortrait: {fileID: -1556463978589607206, guid: 509e8e9f81098eb4eb8bd8d78a021431, type: 3}
@@ -519,7 +520,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   npcData: {fileID: 11400000, guid: 5424f712fb534244dad034b4f63ddb44, type: 2}
-  supportedInteractions: 00000000
+  startingDialogue: {fileID: 11400000, guid: bd19e0538e19fcb4391c03a56f1259e4, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
