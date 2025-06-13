@@ -1,13 +1,43 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+<!-- GameClient/Assets/UI/DialogueUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <!--
+        This is the root container for the entire dialogue system.
+        We'll use this to control the visibility of the whole UI and to create the letterbox effect.
+    -->
     <ui:VisualElement name="DialogueContainer" class="dialogue-container">
-        <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" style="height: 90px; background-image: url(&quot;project://database/Assets/Sprites/Necromancer_creativekind-Sheet.png?fileID=-4549297002301125287&amp;guid=ebe36b10ffd7547418d970a219dc67b6&amp;type=3#Necromancer_creativekind-Sheet_1&quot;);" />
-        <ui:VisualElement style="flex-grow: 1;" />
-        <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" style="height: 78px; background-image: url(&quot;project://database/Assets/Sprites/portrait_mage_guardian-blue%201.png?fileID=-1556463978589607206&amp;guid=509e8e9f81098eb4eb8bd8d78a021431&amp;type=3#mage_guardian-blue_0&quot;);" />
-        <ui:VisualElement name="DialogueBox" class="dialogue-box">
-            <ui:Label name="PlayerSpeakerLabel" text="Player" class="speaker-label player-speaker" />
-            <ui:Label name="NPCSpeakerLabel" text="NPC Name" class="speaker-label npc-speaker" />
-            <ui:Label name="DialogueText" text="..." class="dialogue-text" />
-            <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+
+        <!-- Top cinematic letterbox bar -->
+        <ui:VisualElement name="TopLetterbox" class="letterbox" />
+
+        <!-- This container holds all the main content that appears between the letterboxes -->
+        <ui:VisualElement name="MainContent" class="main-content">
+
+            <!-- A container for the dialogue choices, which will appear above the main dialogue box. Hidden by default. -->
+            <ui:VisualElement name="DialogueChoicesContainer" class="dialogue-choices-container" />
+
+            <!-- This element group holds the portraits and the dialogue box at the bottom of the screen -->
+            <ui:VisualElement name="BottomSection" class="bottom-section">
+                <!-- Player Portrait on the left. It's a container so we can style it independently. -->
+                <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" />
+
+                <!-- The main dialogue box in the center -->
+                <ui:VisualElement name="DialogueBox" class="dialogue-box">
+                    <!-- Container for the speaker's nameplate for easier styling -->
+                    <ui:VisualElement name="SpeakerNamePlate" class="speaker-name-plate">
+                        <ui:Label name="SpeakerName" class="speaker-name-text" text="Speaker Name" />
+                    </ui:VisualElement>
+                    <!-- The label that will display the dialogue text -->
+                    <ui:Label name="DialogueText" class="dialogue-text" text="This is where the dialogue will appear. It might be a very long line of text that needs to wrap around properly." />
+                    <!-- A small visual indicator that the player can continue the conversation -->
+                    <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
+                </ui:VisualElement>
+
+                <!-- NPC Portrait on the right -->
+                <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" />
+            </ui:VisualElement>
         </ui:VisualElement>
+
+        <!-- Bottom cinematic letterbox bar -->
+        <ui:VisualElement name="BottomLetterbox" class="letterbox" />
     </ui:VisualElement>
 </ui:UXML>

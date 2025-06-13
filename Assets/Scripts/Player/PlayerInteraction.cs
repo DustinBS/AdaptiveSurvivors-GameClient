@@ -1,69 +1,51 @@
 // GameClient/Assets/Scripts/Player/PlayerInteraction.cs
-
 using UnityEngine;
-using UnityEngine.InputSystem;
-using System.Collections.Generic;
-using System.Linq;
 
-/// <summary>
-/// Handles the player's ability to interact with objects in the world.
-/// Detects nearby IInteractable objects and triggers their Interact() method
-/// when the player presses the interact key.
-/// </summary>
 public class PlayerInteraction : MonoBehaviour
 {
-    private List<IInteractable> interactablesInRange = new List<IInteractable>();
-    private PlayerControls playerControls;
+    [Header("Interaction Settings")]
+    [Tooltip("The point from which the interaction check is cast.")]
+    [SerializeField] private Transform interactionPoint;
+    [Tooltip("The radius of the interaction check circle.")]
+    [SerializeField] private float interactionRadius = 0.5f;
+    [Tooltip("The layer(s) containing interactable objects.")]
+    [SerializeField] private LayerMask interactableLayer;
 
-    void Awake()
+    private void OnEnable()
     {
-        playerControls = new PlayerControls();
+        // Subscribe to the central input manager's interact event
+        PlayerInputManager.OnInteract += HandleInteract;
     }
 
-    void OnEnable()
+    private void OnDisable()
     {
-        // It's robust to enable the controls and subscribe to events in OnEnable.
-        playerControls.Player.Enable();
-        playerControls.Player.Interact.performed += OnInteractPerformed;
-    }
-
-    void OnDisable()
-    {
-        // ALWAYS unsubscribe and disable in OnDisable to prevent errors.
-        playerControls.Player.Interact.performed -= OnInteractPerformed;
-        playerControls.Player.Disable();
+        // Unsubscribe to prevent errors
+        PlayerInputManager.OnInteract -= HandleInteract;
     }
 
     /// <summary>
-    /// Callback method for when the Interact input action is performed.
+    /// Called when the PlayerInputManager broadcasts an interact event.
     /// </summary>
-    private void OnInteractPerformed(InputAction.CallbackContext context)
+    private void HandleInteract()
     {
-        // Debug.Log("Interact action performed by player.");
-        if (interactablesInRange.Count > 0)
+        // Check for interactable objects within the defined radius
+        var collider = Physics2D.OverlapCircle(interactionPoint.position, interactionRadius, interactableLayer);
+
+        if (collider != null)
         {
-            // Interact with the first object in range.
-            interactablesInRange.First().Interact();
+            // Try to get the IInteractable component and trigger the interaction
+            if (collider.TryGetComponent<IInteractable>(out var interactable))
+            {
+                interactable.Interact();
+            }
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    // Optional: Draw a visual gizmo in the editor to see the interaction radius
+    private void OnDrawGizmos()
     {
-        IInteractable interactable = other.GetComponent<IInteractable>();
-        if (interactable != null && !interactablesInRange.Contains(interactable))
-        {
-            interactablesInRange.Add(interactable);
-            // Debug.Log($"Entered range of interactable: {other.name}");
-        }
-    }
-
-    void OnTriggerExit2D(Collider2D other)
-    {
-        IInteractable interactable = other.GetComponent<IInteractable>();
-        if (interactable != null && interactablesInRange.Contains(interactable))
-        {
-            interactablesInRange.Remove(interactable);
-            // Debug.Log($"Exited range of interactable: {other.name}");
-        }
+        if (interactionPoint == null) return;
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(interactionPoint.position, interactionRadius);
     }
 }
