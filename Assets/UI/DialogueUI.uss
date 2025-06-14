@@ -1,105 +1,158 @@
 /* GameClient/Assets/UI/DialogueUI.uss */
 
-/* The root container that holds everything, positioned at the bottom. */
-.dialogue-container {
+/* --- Root Container --- */
+/* This is the master container. It's hidden by default. */
+.dialogue-root {
+    width: 100%;
+    height: 100%;
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
-    right: 0;
-    height: 25%; /* Takes up the bottom quarter of the screen */
-    flex-direction: row;
-    align-items: flex-end; /* Aligns portraits to the bottom */
-    padding: 0 20px;
+    display: none; /* C# script will change this to 'flex' to show the UI */
+    justify-content: center;
+    align-items: center;
 }
 
-/* Base style for both portraits */
-.portrait {
-    width: 20%; /* Relative width */
-    max-width: 300px;
+/* --- Cinematic Letterboxing --- */
+.letterbox-bar {
+    position: absolute;
+    width: 100%;
+    height: 12%; /* Adjust height of cinematic bars as needed */
+    background-color: rgb(0, 0, 0);
+}
+
+.top-bar {
+    top: 0;
+}
+
+.bottom-bar {
+    bottom: 0;
+}
+
+/* --- Main Dialogue Elements Container --- */
+.dialogue-container {
+    flex-direction: row;
+    align-items: flex-end; /* Aligns portraits to the bottom of the container */
+    width: 100%;
     height: 100%;
-    -unity-background-scale-mode: scale-and-crop;
+    padding: 0 50px;
+}
+
+/* --- Character Portraits --- */
+.portrait {
+    /* Set a fixed aspect ratio for portraits to prevent distortion */
+    aspect-ratio: 1;
+    height: 45%;
+    max-height: 400px;
+    -unity-background-scale-mode: scale-and-crop; /* Crops image to fit, maintains aspect ratio */
+
     /* Smooth transition for the dimming effect */
     transition-property: unity-background-image-tint-color;
     transition-duration: 0.3s;
     transition-timing-function: ease-in-out;
+
+    /* Default tint is white (no tint) */
+    unity-background-image-tint-color: white;
 }
 
-/* Class applied by C# to dim an inactive speaker's portrait */
+/* Added via C# to dim the portrait of the character who is NOT speaking */
 .inactive-speaker {
-    -unity-background-image-tint-color: rgb(80, 80, 80);
+    unity-background-image-tint-color: rgb(100, 100, 100);
 }
 
-/* The main dialogue box, absolutely positioned to overlap the center */
+/* --- Central Dialogue Box --- */
 .dialogue-box {
     position: absolute;
-    left: 15%;
-    right: 15%;
-    bottom: 10px;
-    height: 85%;
-    background-color: rgba(20, 20, 20, 0.9);
-    border-color: rgb(150, 150, 150);
+    bottom: 14%; /* Position it just above the bottom letterbox bar */
+    left: 20%;
+    right: 20%;
+    height: 28%;
+    background-color: rgba(10, 15, 20, 0.85);
+    border-color: rgb(150, 150, 170);
     border-width: 2px;
     border-radius: 10px;
-    padding: 10px 20px;
+    padding: 15px 25px;
 }
 
-/* Base style for speaker name labels */
+/* --- Speaker Nameplate --- */
 .speaker-label {
     position: absolute;
-    top: -30px;
-    padding: 5px 20px;
-    background-color: rgb(20, 20, 20);
-    color: rgb(255, 220, 100);
+    top: -25px; /* Sits on top of the dialogue box */
+    padding: 5px 25px;
+    background-color: rgb(30, 40, 50);
+    color: rgb(255, 220, 150);
     -unity-font-style: bold;
-    font-size: 22px;
+    font-size: 24px;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     border-width: 2px;
     border-bottom-width: 0;
-    border-color: rgb(150, 150, 150);
-    /* Hide by default, C# will show the correct one */
-    display: none;
+    border-color: rgb(150, 150, 170);
 }
 
-/* Positions the player's name on the left */
-.player-speaker {
-    left: 10px;
+/* Add these classes via C# to position the nameplate */
+.speaker-is-player {
+    left: 20px;
 }
 
-/* Positions the NPC's name on the right */
-.npc-speaker {
-    right: 10px;
+.speaker-is-npc {
+    right: 20px;
 }
 
-/* Main dialogue text styling */
+/* --- Text & Choices --- */
+.text-container {
+    flex-direction: row;
+    height: 70%;
+}
+
 .dialogue-text {
     color: white;
-    font-size: 22px;
+    font-size: 24px;
     white-space: normal;
-    -unity-font-style: normal;
-    margin-top: 15px; /* Add space below the speaker name */
-    height: 60%; /* Reserve space for choice buttons below */
-}
-
-/* Container for player choice buttons */
-.choice-button-container {
+    -unity-text-align: upper-left;
     flex-grow: 1;
-    justify-content: flex-end; /* Aligns buttons to the bottom of their container */
-    padding-bottom: 5px;
 }
 
-/* Style for individual choice buttons */
+.continue-prompt {
+    /* A simple triangle as a continue prompt */
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    -unity-background-image-tint-color: rgba(255, 255, 255, 0.7);
+    rotate: 45deg;
+    margin-left: 10px;
+    display: none; /* Show with C# when text is finished typing */
+}
+
+.choice-button-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(10, 15, 20, 0.9);
+    padding: 20px;
+}
+
 .dialogue-choice-button {
-    font-size: 18px;
-    margin: 5px 0;
+    font-size: 20px;
+    margin: 8px 0;
+    padding: 12px;
+    width: 80%;
     color: white;
-    background-color: rgba(60, 60, 90, 0.7);
-    border-left-color: rgb(120, 120, 150);
-    border-right-color: rgb(120, 120, 150);
-    border-top-color: rgb(120, 120, 150);
-    border-bottom-color: rgb(120, 120, 150);
+    background-color: rgba(44, 62, 80, 0.9);
+    border-left-color: rgb(52, 152, 219);
+    border-right-color: rgb(52, 152, 219);
+    border-top-color: rgb(52, 152, 219);
+    border-bottom-color: rgb(52, 152, 219);
+    border-width: 2px;
+    border-radius: 8px;
+    transition-duration: 0.1s;
 }
 
 .dialogue-choice-button:hover {
-    background-color: rgba(80, 80, 120, 0.9);
+    background-color: rgba(52, 152, 219, 0.9);
+    border-color: white;
 }

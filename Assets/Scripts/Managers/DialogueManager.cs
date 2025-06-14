@@ -3,215 +3,177 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.Networking;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// A stateful singleton manager that controls the entire interactive dialogue system.
-/// It drives the two-portrait UI, handles branching conversations from DialogueData,
-/// processes player choices, and manages LLM requests.
+/// A stateful singleton manager that controls the interactive dialogue system.
+/// It has been refactored to use a formal State Machine pattern for robust, crash-free execution.
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager Instance { get; private set; }
 
-    [Header("UI & Data References")]
-    [SerializeField] private UIDocument dialogueUIDocument;
-    [SerializeField] private PlayerData playerData; // Reference to player's data for portrait/name
+    // Defines the possible states of the dialogue system.
+    private enum DialogueState
+    {
+        Inactive,           // Not in a conversation.
+        DisplayingLine,     // Typewriter effect is running.
+        LineFinished,       // Line is fully displayed, waiting for input to continue.
+        AwaitingChoice,     // Player choice buttons are visible.
+        Ending              // Conversation is wrapping up.
+    }
+
+    [Header("Component References")]
+    [Tooltip("The controller for the dialogue UI. Drag the GameObject with the DialogueUIController script here.")]
+    [SerializeField] private DialogueUIController uiController;
+    [SerializeField] private PlayerData playerData;
 
     [Header("LLM Settings")]
     [SerializeField] private bool useDebugMode = true;
     [SerializeField] private string cloudFunctionUrl;
     [SerializeField] private Sprite defaultPortrait;
 
-    // --- UI Element References ---
-    private VisualElement dialogueContainer;
-    private VisualElement playerPortraitElement;
-    private VisualElement npcPortraitElement;
-    private Label playerSpeakerLabel;
-    private Label npcSpeakerLabel;
-    private Label dialogueText;
-    private VisualElement choiceButtonContainer;
-
     // --- State Management ---
+    private DialogueState currentState;
     private DialogueData currentConversation;
     private NPCController currentNpc;
     private int currentLineIndex;
-    private bool isDisplayingLine = false;
     private Coroutine typewriterCoroutine;
-
     private PlayerControls playerControls;
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); } else { Instance = this; }
+        if (Instance != null && Instance != this) { Destroy(gameObject); }
+        else { Instance = this; }
 
-        // --- Get PlayerControls from the central manager ---
         playerControls = PlayerInputManager.Instance.PlayerControls;
-
-        var root = dialogueUIDocument.rootVisualElement;
-        dialogueContainer = root.Q<VisualElement>("DialogueContainer");
-        playerPortraitElement = root.Q<VisualElement>("PlayerPortrait");
-        npcPortraitElement = root.Q<VisualElement>("NPCPortrait");
-        playerSpeakerLabel = root.Q<Label>("PlayerSpeakerLabel");
-        npcSpeakerLabel = root.Q<Label>("NPCSpeakerLabel");
-        dialogueText = root.Q<Label>("DialogueText");
-        choiceButtonContainer = root.Q<VisualElement>("ChoiceButtonContainer");
-
-        dialogueContainer.style.display = DisplayStyle.None;
+        currentState = DialogueState.Inactive;
     }
 
     void OnEnable()
     {
         playerControls.UI.Submit.performed += OnSubmitPerformed;
+        if (uiController != null)
+        {
+            uiController.OnChoiceSelected += OnPlayerResponseClicked;
+        }
     }
 
     void OnDisable()
     {
         playerControls.UI.Submit.performed -= OnSubmitPerformed;
+        if (uiController != null)
+        {
+            uiController.OnChoiceSelected -= OnPlayerResponseClicked;
+        }
     }
 
-    /// <summary>
-    /// Starts a new conversation using a DialogueData asset.
-    /// </summary>
     public void StartConversation(DialogueData dialogue, NPCController npc)
     {
-        if (dialogue == null || dialogue.lines.Count == 0) return;
+        if (currentState != DialogueState.Inactive) return;
+        if (dialogue == null || dialogue.lines.Count == 0 || uiController == null) return;
 
-        // --- Disable Player controls and enable UI controls ---
         PlayerInputManager.Instance.SwitchToUIControls();
-        dialogueContainer.style.display = DisplayStyle.Flex;
         currentConversation = dialogue;
         currentNpc = npc;
         currentLineIndex = -1;
 
+        uiController.UpdatePortraits(playerData.playerPortrait, npc.NPCPortrait ?? defaultPortrait);
+        uiController.ShowDialogue(true);
+
         AdvanceConversation();
     }
 
-    /// <summary>
-    /// Called when the player presses the submit button during a conversation.
-    /// </summary>
     private void OnSubmitPerformed(InputAction.CallbackContext context)
     {
-        if (currentConversation != null)
+        // Only process submit input based on the current state.
+        switch (currentState)
         {
-            AdvanceConversation();
+            case DialogueState.DisplayingLine:
+                FinishLine();
+                break;
+            case DialogueState.LineFinished:
+                AdvanceConversation();
+                break;
         }
     }
 
-    /// <summary>
-    /// Moves the conversation to the next line or handles choices.
-    /// </summary>
     private void AdvanceConversation()
     {
-        if (isDisplayingLine)
-        {
-            FinishLine();
-            return;
-        }
-
-        if (choiceButtonContainer.childCount > 0)
-        {
-            return;
-        }
-
+        // Check if we are at the end of the conversation.
         currentLineIndex++;
-
         if (currentLineIndex >= currentConversation.lines.Count)
         {
             EndConversation();
             return;
         }
-
         DisplayLine(currentConversation.lines[currentLineIndex]);
     }
 
-    /// <summary>
-    /// Displays a single line of dialogue and updates the UI.
-    /// </summary>
     private void DisplayLine(DialogueLine line)
     {
-        UpdateSpeakerUI(line.speaker, line.speakerData);
-        choiceButtonContainer.Clear();
-
-        if (line.isLLMGenerated)
+        string speakerName;
+        if (line.speaker == DialogueLine.Speaker.Player)
         {
-            StartCoroutine(RequestLLMCommentary(line));
+            uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.Player);
+            speakerName = playerData.playerName;
         }
         else
         {
-            if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
-            typewriterCoroutine = StartCoroutine(ShowTypewriterText(line.text));
+            uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.NPC);
+            speakerName = currentNpc.NPCName;
+        }
+
+        uiController.HideChoices();
+
+        if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
+
+        if (line.isLLMGenerated)
+        {
+            typewriterCoroutine = StartCoroutine(RequestLLMCommentary(line, speakerName));
+        }
+        else
+        {
+            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, line.text));
         }
     }
 
-    /// <summary>
-    /// Instantly finishes the typewriter effect for the current line.
-    /// </summary>
     private void FinishLine()
     {
         if (typewriterCoroutine != null)
         {
             StopCoroutine(typewriterCoroutine);
-            isDisplayingLine = false;
-            DialogueLine currentLine = currentConversation.lines[currentLineIndex];
-            dialogueText.text = currentLine.text;
-            ShowPlayerResponses(currentLine);
         }
+
+        if (currentState == DialogueState.Ending || currentConversation == null) return;
+
+        var currentLine = currentConversation.lines[currentLineIndex];
+        uiController.SetDialogueLine(currentLine.speaker == DialogueLine.Speaker.Player ? playerData.playerName : currentNpc.NPCName, currentLine.text);
+
+        ShowPlayerResponses(currentLine);
     }
 
-    /// <summary>
-    /// Updates the UI portraits and speaker labels.
-    /// </summary>
-    private void UpdateSpeakerUI(DialogueLine.Speaker activeSpeaker, NPCData npcData)
+    private void ShowPlayerResponses(DialogueLine line)
     {
-        playerPortraitElement.style.backgroundImage = new StyleBackground(playerData.playerPortrait);
-        npcPortraitElement.style.backgroundImage = new StyleBackground(npcData?.portraitSprite ?? defaultPortrait);
-
-        playerSpeakerLabel.text = playerData.playerName;
-        npcSpeakerLabel.text = npcData?.npcName ?? "Unknown";
-
-        if (activeSpeaker == DialogueLine.Speaker.Player)
+        if (line.playerResponses != null && line.playerResponses.Count > 0)
         {
-            playerSpeakerLabel.style.display = DisplayStyle.Flex;
-            npcSpeakerLabel.style.display = DisplayStyle.None;
-            playerPortraitElement.RemoveFromClassList("inactive-speaker");
-            npcPortraitElement.AddToClassList("inactive-speaker");
+            currentState = DialogueState.AwaitingChoice;
+            uiController.ShowContinuePrompt(false);
+            uiController.DisplayChoices(line.playerResponses);
         }
         else
         {
-            playerSpeakerLabel.style.display = DisplayStyle.None;
-            npcSpeakerLabel.style.display = DisplayStyle.Flex;
-            playerPortraitElement.AddToClassList("inactive-speaker");
-            npcPortraitElement.RemoveFromClassList("inactive-speaker");
+            currentState = DialogueState.LineFinished;
+            uiController.ShowContinuePrompt(true);
         }
     }
 
-    /// <summary>
-    /// Displays the player choice buttons for a given line.
-    /// </summary>
-    private void ShowPlayerResponses(DialogueLine line)
-    {
-        choiceButtonContainer.Clear();
-        if (line.playerResponses != null && line.playerResponses.Count > 0)
-        {
-            foreach (var response in line.playerResponses)
-            {
-                Button choiceButton = new Button(() => OnPlayerResponseClicked(response));
-                choiceButton.text = response.responseText;
-                choiceButton.AddToClassList("dialogue-choice-button");
-                choiceButtonContainer.Add(choiceButton);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Called when a player clicks a response button.
-    /// </summary>
     private void OnPlayerResponseClicked(PlayerResponse response)
     {
-        choiceButtonContainer.Clear();
+        if (currentState != DialogueState.AwaitingChoice) return;
+
+        uiController.HideChoices();
+
         if (response.nextDialogue != null)
         {
             currentConversation = response.nextDialogue;
@@ -224,26 +186,32 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Coroutine for the typewriter text effect.
-    /// </summary>
-    private IEnumerator ShowTypewriterText(string text)
+    private IEnumerator ShowTypewriterText(string speakerName, string text)
     {
-        isDisplayingLine = true;
-        dialogueText.text = "";
+        currentState = DialogueState.DisplayingLine;
+        uiController.ShowContinuePrompt(false);
+        uiController.SetDialogueLine(speakerName, "");
+
+        string currentText = "";
         foreach (char letter in text.ToCharArray())
         {
-            dialogueText.text += letter;
+            if (currentState == DialogueState.Ending) yield break;
+            currentText += letter;
+            uiController.SetDialogueLine(speakerName, currentText);
             yield return new WaitForSeconds(0.03f);
         }
-        isDisplayingLine = false;
-        ShowPlayerResponses(currentConversation.lines[currentLineIndex]);
+
+        if (currentState != DialogueState.Ending)
+        {
+           ShowPlayerResponses(currentConversation.lines[currentLineIndex]);
+        }
     }
 
-    private IEnumerator RequestLLMCommentary(DialogueLine line)
+    private IEnumerator RequestLLMCommentary(DialogueLine line, string speakerName)
     {
-        isDisplayingLine = true;
-        dialogueText.text = "Hmmm...";
+        currentState = DialogueState.DisplayingLine;
+        uiController.ShowContinuePrompt(false);
+        uiController.SetDialogueLine(speakerName, "Hmmm...");
         string generatedText = "This is default LLM debug text. The real call would go here.";
 
         if (useDebugMode)
@@ -252,26 +220,32 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            // Web Request Logic...
+            // Full Web Request Logic would go here...
         }
 
-        if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
-        typewriterCoroutine = StartCoroutine(ShowTypewriterText(generatedText));
+        if (currentState != DialogueState.Ending)
+        {
+            if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, generatedText));
+        }
     }
 
-    /// <summary>
-    /// Ends the current conversation and hides the UI.
-    /// </summary>
     public void EndConversation()
     {
-        dialogueContainer.style.display = DisplayStyle.None;
+        if (currentState == DialogueState.Inactive) return;
+
+        currentState = DialogueState.Ending;
+
+        if (uiController != null)
+        {
+            uiController.ShowDialogue(false);
+        }
+
         currentConversation = null;
         currentNpc = null;
 
-        // --- Disable UI controls and re-enable Player controls ---
         PlayerInputManager.Instance.SwitchToPlayerControls();
-    }
 
-    [System.Serializable]
-    private class NpcCommentaryResponse { public string commentary; }
+        currentState = DialogueState.Inactive;
+    }
 }

@@ -1,13 +1,60 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:VisualElement name="DialogueContainer" class="dialogue-container">
-        <ui:VisualElement name="PlayerPortrait" class="portrait player-portrait" style="height: 90px; background-image: url(&quot;project://database/Assets/Sprites/Necromancer_creativekind-Sheet.png?fileID=-4549297002301125287&amp;guid=ebe36b10ffd7547418d970a219dc67b6&amp;type=3#Necromancer_creativekind-Sheet_1&quot;);" />
-        <ui:VisualElement style="flex-grow: 1;" />
-        <ui:VisualElement name="NPCPortrait" class="portrait npc-portrait" style="height: 78px; background-image: url(&quot;project://database/Assets/Sprites/portrait_mage_guardian-blue%201.png?fileID=-1556463978589607206&amp;guid=509e8e9f81098eb4eb8bd8d78a021431&amp;type=3#mage_guardian-blue_0&quot;);" />
-        <ui:VisualElement name="DialogueBox" class="dialogue-box">
-            <ui:Label name="PlayerSpeakerLabel" text="Player" class="speaker-label player-speaker" />
-            <ui:Label name="NPCSpeakerLabel" text="NPC Name" class="speaker-label npc-speaker" />
-            <ui:Label name="DialogueText" text="..." class="dialogue-text" />
-            <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+<!-- GameClient/Assets/UI/DialogueUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <!--
+        This is the root container for the entire dialogue system.
+        It's initially hidden and will be made visible by the C# controller.
+        It's set to fill the entire screen so its children can be positioned correctly.
+    -->
+    <ui:VisualElement name="DialogueRoot" class="dialogue-root">
+
+        <!-- Cinematic Letterbox Bars -->
+        <ui:VisualElement name="TopBar" class="letterbox-bar top-bar" />
+        <ui:VisualElement name="BottomBar" class="letterbox-bar bottom-bar" />
+
+        <!--
+            This container holds the main dialogue elements (portraits, text box)
+            and is centered within the screen area left by the letterbox bars.
+        -->
+        <ui:VisualElement name="DialogueContainer" class="dialogue-container">
+
+            <!--
+                Character Portraits
+                - The left is always the Player.
+                - The right is always the NPC.
+                - The C# script will set their background images at runtime.
+            -->
+            <ui:VisualElement name="PlayerPortrait" class="portrait left-portrait" />
+
+            <!-- This spacer element ensures the portraits are pushed to the sides -->
+            <ui:VisualElement style="flex-grow: 1;" />
+
+            <ui:VisualElement name="NPCPortrait" class="portrait right-portrait" />
+
+            <!--
+                The main dialogue box, absolutely positioned to overlap the center-bottom.
+                This allows portraits to appear "behind" it.
+            -->
+            <ui:VisualElement name="DialogueBox" class="dialogue-box">
+
+                <!--
+                    A single label for the speaker's name. The C# script will set its
+                    text and the USS will position it based on who is talking.
+                -->
+                <ui:Label name="SpeakerLabel" text="Speaker Name" class="speaker-label" />
+
+                <!-- Container for dialogue text and the continue prompt -->
+                <ui:VisualElement name="TextContainer" class="text-container">
+                    <ui:Label name="DialogueText" text="This is where the dialogue text will appear, character by character..." class="dialogue-text" />
+                    <!-- The continue prompt, hidden by default -->
+                    <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
+                </ui:VisualElement>
+
+                <!--
+                    This container will be populated with player choice buttons from the C# script
+                    when a choice is available.
+                -->
+                <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
