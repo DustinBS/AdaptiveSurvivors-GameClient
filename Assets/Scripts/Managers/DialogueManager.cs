@@ -46,7 +46,9 @@ public class DialogueManager : MonoBehaviour
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); } else { Instance = this; }
-        playerControls = new PlayerControls();
+
+        // --- Get PlayerControls from the central manager ---
+        playerControls = PlayerInputManager.Instance.PlayerControls;
 
         var root = dialogueUIDocument.rootVisualElement;
         dialogueContainer = root.Q<VisualElement>("DialogueContainer");
@@ -62,12 +64,12 @@ public class DialogueManager : MonoBehaviour
 
     void OnEnable()
     {
-        playerControls.Player.Interact.performed += OnInteractPerformed;
+        playerControls.UI.Submit.performed += OnSubmitPerformed;
     }
 
     void OnDisable()
     {
-        playerControls.Player.Interact.performed -= OnInteractPerformed;
+        playerControls.UI.Submit.performed -= OnSubmitPerformed;
     }
 
     /// <summary>
@@ -77,21 +79,22 @@ public class DialogueManager : MonoBehaviour
     {
         if (dialogue == null || dialogue.lines.Count == 0) return;
 
-        playerControls.Player.Enable();
+        // --- Disable Player controls and enable UI controls ---
+        PlayerInputManager.Instance.SwitchToUIControls();
         dialogueContainer.style.display = DisplayStyle.Flex;
         currentConversation = dialogue;
         currentNpc = npc;
-        currentLineIndex = -1; // Start at -1 so the first advance goes to index 0
+        currentLineIndex = -1;
 
         AdvanceConversation();
     }
 
     /// <summary>
-    /// Called when the player presses the interact button during a conversation.
+    /// Called when the player presses the submit button during a conversation.
     /// </summary>
-    private void OnInteractPerformed(InputAction.CallbackContext context)
+    private void OnSubmitPerformed(InputAction.CallbackContext context)
     {
-        // Only advance the dialogue if a conversation is active
+        Debug.Log("Submit button pressed in DialogueManager.");
         if (currentConversation != null)
         {
             AdvanceConversation();
@@ -103,14 +106,13 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     private void AdvanceConversation()
     {
-        // If text is currently typing, finish it instantly
+        Debug.Log($"Advancing conversation: {currentConversation.name}, Line Index: {currentLineIndex}");
         if (isDisplayingLine)
         {
             FinishLine();
             return;
         }
 
-        // If there are choices on screen, do nothing until a choice is made
         if (choiceButtonContainer.childCount > 0)
         {
             return;
@@ -118,14 +120,12 @@ public class DialogueManager : MonoBehaviour
 
         currentLineIndex++;
 
-        // If we've reached the end of the lines in this dialogue asset
         if (currentLineIndex >= currentConversation.lines.Count)
         {
             EndConversation();
             return;
         }
 
-        // Display the current line
         DisplayLine(currentConversation.lines[currentLineIndex]);
     }
 
@@ -158,8 +158,8 @@ public class DialogueManager : MonoBehaviour
             StopCoroutine(typewriterCoroutine);
             isDisplayingLine = false;
             DialogueLine currentLine = currentConversation.lines[currentLineIndex];
-            dialogueText.text = currentLine.isLLMGenerated ? "..." : currentLine.text; // Show full text
-            ShowPlayerResponses(currentLine); // Show choices if any
+            dialogueText.text = currentLine.text;
+            ShowPlayerResponses(currentLine);
         }
     }
 
@@ -168,15 +168,12 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     private void UpdateSpeakerUI(DialogueLine.Speaker activeSpeaker, NPCData npcData)
     {
-        // Set portraits
         playerPortraitElement.style.backgroundImage = new StyleBackground(playerData.playerPortrait);
         npcPortraitElement.style.backgroundImage = new StyleBackground(npcData?.portraitSprite ?? defaultPortrait);
 
-        // Set labels
         playerSpeakerLabel.text = playerData.playerName;
         npcSpeakerLabel.text = npcData?.npcName ?? "Unknown";
 
-        // Set active/inactive states
         if (activeSpeaker == DialogueLine.Speaker.Player)
         {
             playerSpeakerLabel.style.display = DisplayStyle.Flex;
@@ -217,7 +214,6 @@ public class DialogueManager : MonoBehaviour
     private void OnPlayerResponseClicked(PlayerResponse response)
     {
         choiceButtonContainer.Clear();
-        // If the response leads to another dialogue, start it. Otherwise, end.
         if (response.nextDialogue != null)
         {
             currentConversation = response.nextDialogue;
@@ -243,7 +239,6 @@ public class DialogueManager : MonoBehaviour
             yield return new WaitForSeconds(0.03f);
         }
         isDisplayingLine = false;
-        // After text is finished, show choices if they exist
         ShowPlayerResponses(currentConversation.lines[currentLineIndex]);
     }
 
@@ -260,14 +255,10 @@ public class DialogueManager : MonoBehaviour
         else
         {
             // Web Request Logic...
-            // ...
         }
 
-        // Use the generated text
         if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
         typewriterCoroutine = StartCoroutine(ShowTypewriterText(generatedText));
-
-        // isDisplayingLine is set to false inside ShowTypewriterText
     }
 
     /// <summary>
@@ -278,7 +269,9 @@ public class DialogueManager : MonoBehaviour
         dialogueContainer.style.display = DisplayStyle.None;
         currentConversation = null;
         currentNpc = null;
-        playerControls.Player.Disable(); // Disable interact listener until next interaction starts
+
+        // --- Disable UI controls and re-enable Player controls ---
+        PlayerInputManager.Instance.SwitchToPlayerControls();
     }
 
     [System.Serializable]

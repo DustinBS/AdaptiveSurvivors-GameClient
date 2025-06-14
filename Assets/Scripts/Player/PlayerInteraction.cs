@@ -17,21 +17,18 @@ public class PlayerInteraction : MonoBehaviour
 
     void Awake()
     {
-        playerControls = new PlayerControls();
+        // Get the single instance of PlayerControls from the manager
+        playerControls = PlayerInputManager.Instance.PlayerControls;
     }
 
     void OnEnable()
     {
-        // It's robust to enable the controls and subscribe to events in OnEnable.
-        playerControls.Player.Enable();
         playerControls.Player.Interact.performed += OnInteractPerformed;
     }
 
     void OnDisable()
     {
-        // ALWAYS unsubscribe and disable in OnDisable to prevent errors.
         playerControls.Player.Interact.performed -= OnInteractPerformed;
-        playerControls.Player.Disable();
     }
 
     /// <summary>
@@ -39,10 +36,11 @@ public class PlayerInteraction : MonoBehaviour
     /// </summary>
     private void OnInteractPerformed(InputAction.CallbackContext context)
     {
-        // Debug.Log("Interact action performed by player.");
         if (interactablesInRange.Count > 0)
         {
             // Interact with the first object in range.
+            // Using First() is simple, but for more complex scenarios you might want
+            // to find the closest interactable object.
             interactablesInRange.First().Interact();
         }
     }
@@ -53,7 +51,6 @@ public class PlayerInteraction : MonoBehaviour
         if (interactable != null && !interactablesInRange.Contains(interactable))
         {
             interactablesInRange.Add(interactable);
-            // Debug.Log($"Entered range of interactable: {other.name}");
         }
     }
 
@@ -63,7 +60,6 @@ public class PlayerInteraction : MonoBehaviour
         if (interactable != null && interactablesInRange.Contains(interactable))
         {
             interactablesInRange.Remove(interactable);
-            // Debug.Log($"Exited range of interactable: {other.name}");
         }
     }
 }
