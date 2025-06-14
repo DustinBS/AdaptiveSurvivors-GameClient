@@ -1,0 +1,17 @@
+<!-- GameClient/Assets/UI/InteractionPromptUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <!--
+        The root container for the interaction prompt.
+        This will be positioned in world space near the interactable object.
+        It's initially hidden.
+    -->
+    <ui:VisualElement name="PromptContainer" class="prompt-container">
+        <!-- The white square representing the key -->
+        <ui:VisualElement name="KeyIcon" class="key-icon">
+            <!-- The text for the key itself (e.g., 'E') -->
+            <ui:Label name="KeyLabel" class="key-label" text="E" />
+        </ui:VisualElement>
+        <!-- The dynamic text describing the action (e.g., 'Talk to Sage') -->
+        <ui:Label name="ActionLabel" class="action-label" text="Interact" />
+    </ui:VisualElement>
+</ui:UXML>

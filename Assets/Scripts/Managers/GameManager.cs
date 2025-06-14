@@ -1,101 +1,70 @@
 // GameClient/Assets/Scripts/Managers/GameManager.cs
-
 using UnityEngine;
-using System.Collections; // Required for IEnumerator
+using UnityEngine.SceneManagement;
 
-/// <summary>
-/// A scene-specific manager that controls the overall game state, including wave progression,
-/// game time, and pausing. It listens for critical events like player death to transition game states.
-/// </summary>
 public class GameManager : MonoBehaviour
 {
-    // A public enum to clearly define the possible states of the game session.
-    public enum GameState
-    {
-        Playing,
-        Paused,
-        GameOver
-    }
-
-    // --- Singleton Instance ---
-    // Provides easy, static access to the manager from other scripts in the same scene.
     public static GameManager Instance { get; private set; }
 
-    [Header("Game State")]
-    [Tooltip("The current wave number.")]
-    public int currentWave = 1;
-    [Tooltip("The time elapsed since the start of the current run (in seconds).")]
-    public float timeElapsed = 0f;
+    [Header("Player Management")]
+    [Tooltip("The player prefab to instantiate if not already in the scene.")]
+    public GameObject playerPrefab;
 
-    // The current state of the game. Making it public allows other scripts to check it if needed.
-    public GameState CurrentState { get; private set; }
+    [Header("Game State")]
+    [Tooltip("The current wave number of the game.")]
+    public int currentWave = 0; // [FIX] Added property for wave tracking
+
+    private PlayerStatus playerStatus;
 
     void Awake()
     {
-        // Scene-specific singleton pattern.
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
+    private void Start()
+    {
+        playerStatus = FindObjectOfType<PlayerStatus>();
+
+        if (playerStatus == null)
+        {
+            if (playerPrefab != null)
+            {
+                var playerInstance = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
+                playerStatus = playerInstance.GetComponent<PlayerStatus>();
+            }
+        }
+
+        if (playerStatus != null)
+        {
+            playerStatus.OnPlayerDeath += HandlePlayerDeath;
         }
         else
         {
-            Instance = this;
+            Debug.LogError("GameManager: Could not find PlayerStatus component in the scene!", this);
         }
-
-        // The game always starts in the 'Playing' state.
-        CurrentState = GameState.Playing;
     }
 
-    void OnEnable()
+    private void OnDisable()
     {
-        // Subscribe to the static OnPlayerDeath event when this manager is enabled.
-        PlayerStatus.OnPlayerDeath += HandlePlayerDeath;
-    }
-
-    void OnDisable()
-    {
-        // ALWAYS unsubscribe from static events on disable/destroy to prevent memory leaks.
-        PlayerStatus.OnPlayerDeath -= HandlePlayerDeath;
-    }
-
-    void Update()
-    {
-        // If the game is not in the 'Playing' state, do not run game logic.
-        // This is how we achieve a "pause" without freezing the entire game engine.
-        if (CurrentState != GameState.Playing)
+        if (playerStatus != null)
         {
-            return;
-        }
-
-        timeElapsed += Time.deltaTime;
-
-        // Example logic for advancing waves.
-        if (timeElapsed >= currentWave * 60f)
-        {
-            AdvanceWave();
+            playerStatus.OnPlayerDeath -= HandlePlayerDeath;
         }
     }
 
-    /// <summary>
-    /// The event handler that is called when the PlayerStatus.OnPlayerDeath event is fired.
-    /// </summary>
     private void HandlePlayerDeath()
     {
-        CurrentState = GameState.GameOver;
-        StartCoroutine(ShowDeathMenuAfterDelay(1.5f));
+        Debug.Log("GameManager received player death event. Handling game over logic.");
+        Invoke(nameof(ReloadScene), 3f);
     }
 
-    // A small delay makes the transition feel less abrupt.
-    private IEnumerator ShowDeathMenuAfterDelay(float delay)
+    private void ReloadScene()
     {
-        yield return new WaitForSeconds(delay);
-        UIManager.Instance.ShowDeathMenu();
-    }
-
-    private void AdvanceWave()
-    {
-        currentWave++;
-        Debug.Log($"Advancing to Wave {currentWave}!");
-        // Here you might trigger events for the EnemySpawner to change its behavior.
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

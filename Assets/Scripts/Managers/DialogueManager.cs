@@ -8,10 +8,6 @@ using UnityEngine.UIElements;
 public class DialogueManager : MonoBehaviour
 {
     // --- Public Events ---
-    /// <summary>
-    /// Event fired when the dialogue UI is opened or closed.
-    /// Sends 'true' when dialogue starts (UI is active), 'false' when it ends.
-    /// </summary>
     public static event Action<bool> OnDialogueStateChanged;
 
     // --- Public Singleton ---
@@ -19,11 +15,10 @@ public class DialogueManager : MonoBehaviour
 
     // --- Serialized Fields ---
     [Header("UI Setup")]
-    [Tooltip("The UI Document component containing the dialogue UI.")]
     [SerializeField] private UIDocument dialogueUIDocument;
 
     [Header("Data References")]
-    [Tooltip("Default PlayerData for portrait reference.")]
+    [Tooltip("Reference to the main PlayerData asset.")]
     [SerializeField] private PlayerData playerData;
 
     // --- Private UI Element References ---
@@ -46,16 +41,7 @@ public class DialogueManager : MonoBehaviour
 
     private void Awake()
     {
-        // Singleton pattern
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
-
+        if (Instance != null && Instance != this) { Destroy(gameObject); } else { Instance = this; }
         currentDialogueLines = new Queue<string>();
     }
 
@@ -81,38 +67,48 @@ public class DialogueManager : MonoBehaviour
         dialogueText = root.Q<Label>("DialogueText");
         continuePrompt = root.Q<VisualElement>("ContinuePrompt");
         dialogueChoicesContainer = root.Q<VisualElement>("DialogueChoicesContainer");
-
-        if (playerData != null && playerData.portrait != null)
-        {
-             playerPortrait.style.backgroundImage = new StyleBackground(playerData.portrait);
-        }
     }
 
     public void StartDialogue(DialogueData dialogueData)
     {
+        // [FIX] Ensure there is CharacterData selected before starting a dialogue
+        if (playerData.characterData == null)
+        {
+            Debug.LogError("Cannot start dialogue, PlayerData has no CharacterData assigned!");
+            return;
+        }
+
+        // [FIX] The original DialogueData script uses 'lines' not 'dialogueLines'
+        if (dialogueData == null || dialogueData.lines.Count == 0) return;
+
         currentDialogueData = dialogueData;
         currentDialogueLines.Clear();
 
-        foreach (var line in dialogueData.dialogueLines)
+        // [FIX] The original DialogueData structure is more complex; this is a simplified version for now.
+        // We will adapt this later if we re-implement branching dialogue.
+        foreach (var line in dialogueData.lines)
         {
-            currentDialogueLines.Enqueue(line);
+            currentDialogueLines.Enqueue(line.text);
         }
 
-        if (dialogueData.npcData != null && dialogueData.npcData.portrait != null)
+        // [FIX] Access the portrait from the CharacterData sub-asset
+        playerPortrait.style.backgroundImage = new StyleBackground(playerData.characterData.characterPortrait);
+
+        // [FIX] The original NPCData uses 'portraitSprite' not 'portrait'
+        if (dialogueData.lines[0].speakerData != null && dialogueData.lines[0].speakerData.portraitSprite != null)
         {
-            npcPortrait.style.backgroundImage = new StyleBackground(dialogueData.npcData.portrait);
+            npcPortrait.style.backgroundImage = new StyleBackground(dialogueData.lines[0].speakerData.portraitSprite);
         }
 
         isDialogueActive = true;
         dialogueContainer.style.display = DisplayStyle.Flex;
-        OnDialogueStateChanged?.Invoke(true); // Broadcast that dialogue has started
+        OnDialogueStateChanged?.Invoke(true);
 
         DisplayNextLine();
     }
 
     public void DisplayNextLine()
     {
-        // If the typewriter is running, the first press should skip it.
         if (isTyping)
         {
             SkipTypewriter();
@@ -128,26 +124,25 @@ public class DialogueManager : MonoBehaviour
         fullLine = currentDialogueLines.Dequeue();
         UpdateSpeakerUI();
 
-        if (typeWriterCoroutine != null)
-        {
-            StopCoroutine(typeWriterCoroutine);
-        }
+        if (typeWriterCoroutine != null) StopCoroutine(typeWriterCoroutine);
         typeWriterCoroutine = StartCoroutine(TypewriterEffect(fullLine));
     }
 
     private void UpdateSpeakerUI()
     {
-        bool isPlayerSpeaking = (currentDialogueData.dialogueLines.Length - currentDialogueLines.Count) % 2 != 0;
+        // This logic will need to be updated when we re-implement the full branching dialogue system.
+        // For now, it alternates speakers.
+        bool isPlayerSpeaking = (currentDialogueData.lines.Count - currentDialogueLines.Count) % 2 == 0;
 
         if (isPlayerSpeaking)
         {
-            speakerName.text = playerData.characterName;
+            speakerName.text = playerData.characterData.characterName;
             playerPortrait.AddToClassList("active");
             npcPortrait.RemoveFromClassList("active");
         }
         else
         {
-            speakerName.text = currentDialogueData.npcData.characterName;
+            speakerName.text = currentDialogueData.lines[0].speakerData.npcName;
             npcPortrait.AddToClassList("active");
             playerPortrait.RemoveFromClassList("active");
         }
@@ -169,9 +164,6 @@ public class DialogueManager : MonoBehaviour
         continuePrompt.style.opacity = 1;
     }
 
-    /// <summary>
-    /// Finishes the typewriter effect instantly.
-    /// </summary>
     private void SkipTypewriter()
     {
         if (isTyping)
@@ -187,17 +179,13 @@ public class DialogueManager : MonoBehaviour
     {
         isDialogueActive = false;
         dialogueContainer.style.display = DisplayStyle.None;
-        OnDialogueStateChanged?.Invoke(false); // Broadcast that dialogue has ended
+        OnDialogueStateChanged?.Invoke(false);
     }
 
     private void Update()
     {
-        // Using the new Input System's "anyKey" would be more robust,
-        // but for now, we can check for a common key press.
         if (isDialogueActive && Input.anyKeyDown)
         {
-            // We should prevent advancing dialogue if a UI button was clicked, for example.
-            // This check can be made more robust later.
             if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2))
                 return;
 

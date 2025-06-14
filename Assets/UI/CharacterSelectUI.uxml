@@ -1,0 +1,40 @@
+<!-- GameClient/Assets/UI/CharacterSelectUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <!--
+        Root container for the entire character select screen.
+        It establishes the two-panel layout and the overall theme.
+    -->
+    <ui:VisualElement name="ScreenContainer" class="screen-container">
+
+        <!-- Left Panel: Character Information Display -->
+        <ui:VisualElement name="InfoPanel" class="info-panel">
+            <ui:Label name="CharacterName" class="character-name" text="SELECT A HEAD" />
+            <ui:Label name="CharacterDescription" class="character-description" text="Choose your destiny from the fluid-filled jars." />
+
+            <ui:VisualElement class="divider" />
+
+            <ui:Label text="CORE STATS" class="stats-header" />
+            <ui:VisualElement name="StatsContainer" class="stats-container">
+                <ui:Label name="StatHealth" class="stat-label" text="Base Health: --" />
+                <ui:Label name="StatDamage" class="stat-label" text="Base Damage: --" />
+                <ui:Label name="StatSpeed" class="stat-label" text="Speed Multiplier: --" />
+                <ui:VisualElement name="StatHealthRegenContainer" class="stat-label-container">
+                    <ui:Label name="StatHealthRegen" class="stat-label" text="Health Regen: --" />
+                    <ui:Label name="StatHealthRegenPercent" class="stat-label-percent" text="" />
+                </ui:VisualElement>
+                <ui:Label name="StatUpgradeChoices" class="stat-label" text="Upgrade Choices: --" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Right Panel: The Mad Scientist's Lab -->
+        <ui:VisualElement name="LabPanel" class="lab-panel">
+            <!-- This container will hold the 3x3 grid of jars, populated by C# -->
+            <ui:VisualElement name="JarGrid" class="jar-grid" />
+        </ui:VisualElement>
+
+        <!-- Bottom Center: Play Button -->
+        <ui:VisualElement name="PlayButtonContainer" class="play-button-container">
+            <ui:Button name="PlayButton" class="play-button" text="ADAPT" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

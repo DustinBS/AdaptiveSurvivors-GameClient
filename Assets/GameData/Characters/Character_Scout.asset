@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2bb69f7003031b4b8f191d620766f57, type: 3}
+  m_Name: Character_Scout
+  m_EditorClassIdentifier: 
+  characterName: Scout
+  description: A swift and nimble skirmisher who outmaneuvers foes and has a knack
+    for finding tactical advantages.
+  characterSprite: {fileID: -56096711997968560, guid: c81430986546ffd4ab1d3b79acc74253, type: 3}
+  characterPortrait: {fileID: 1422636281239544470, guid: cfebf220f9db2234dae60ed249354c51, type: 3}
+  baseHealth: 70
+  baseDamage: 7
+  speedMultiplier: 2
+  hasHealthRegen: 0
+  healthRegenPercent: 0.01
+  hasExtraUpgradeChoice: 1
+  extraUpgradeChoices: 1
+  defaultUpgradeChoices: 2

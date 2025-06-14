@@ -1,83 +1,55 @@
 // GameClient/Assets/Scripts/Player/PlayerStatus.cs
-
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
 using System;
+using System.Collections.Generic;
 
-/// <summary>
-/// Manages the player's health and other core stats.
-/// Broadcasts events for health changes and player death.
-/// </summary>
 public class PlayerStatus : MonoBehaviour
 {
-    [Header("Player Stats")]
+    [Header("Data References")]
+    [Tooltip("The PlayerData ScriptableObject holding the player's current and max stats.")]
+    public PlayerData playerData; // [FIX] Made public to be accessible by other scripts
+
+    [Header("Dependencies")]
+    [Tooltip("Unique identifier for the player.")]
     public string playerId = "player_001";
-    public float maxHealth = 100f;
+
     public float currentHealth;
-    public float maxMana = 50f;
-    public float currentMana;
-    public List<string> activeBuffs = new List<string>();
-    public List<string> activeDebuffs = new List<string>();
-
-    [Header("Kafka Event Settings")]
-    public float statusEventSendInterval = 1.0f;
-
-    // --- Events for other systems to subscribe to ---
-    /// <summary>
-    /// Event fired when health changes. Parameters: currentHealth (float), maxHealth (float).
-    /// </summary>
-    public event Action<float, float> OnHealthChanged;
-    
-    /// <summary>
-    /// A static event fired globally when the player's health reaches zero.
-    /// Static events can be subscribed to by any script without needing a direct reference to this component instance.
-    /// </summary>
-    public static event Action OnPlayerDeath;
-
+    public float maxHealth;
 
     private KafkaClient kafkaClient;
-    private float statusEventTimer;
-    private bool isDead = false;
+
+    public event Action<float, float> OnHealthChanged;
+    public event Action OnPlayerDeath;
 
     void Awake()
     {
-        currentHealth = maxHealth;
-        currentMana = maxMana;
-
-        kafkaClient = FindAnyObjectByType<KafkaClient>();
+        kafkaClient = FindObjectOfType<KafkaClient>();
         if (kafkaClient == null)
         {
-            Debug.LogError("PlayerStatus: KafkaClient not found.", this);
-            enabled = false;
+            Debug.LogWarning("PlayerStatus: KafkaClient not found. Death events will not be sent.", this);
         }
 
-        statusEventTimer = statusEventSendInterval;
+        if (playerData == null || playerData.characterData == null)
+        {
+            Debug.LogError("PlayerStatus: PlayerData or its CharacterData is not assigned. Disabling component.", this);
+            enabled = false;
+            return;
+        }
+
+        // Initialize stats from the PlayerData asset at the start.
+        maxHealth = playerData.characterData.baseHealth;
+        currentHealth = maxHealth;
     }
 
     void Start()
     {
-        // Fire the event on start to initialize UI elements like the health bar.
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 
-    void Update()
+    public void TakeDamage(float damageAmount)
     {
-        statusEventTimer -= Time.deltaTime;
-        if (statusEventTimer <= 0)
-        {
-            SendPlayerStatusEvent();
-            statusEventTimer = statusEventSendInterval;
-        }
-    }
-
-    public void TakeDamage(float amount, string sourceEnemyId = "unknown_enemy")
-    {
-        // Prevent taking damage if already dead.
-        if (isDead) return;
-
-        currentHealth -= amount;
-        if (currentHealth < 0) currentHealth = 0;
+        currentHealth -= damageAmount;
+        currentHealth = Mathf.Max(currentHealth, 0); // Prevent health from going below zero
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
@@ -87,62 +59,35 @@ public class PlayerStatus : MonoBehaviour
         }
     }
 
-    public void Heal(float amount)
+    public void Heal(float healAmount)
     {
-        if (isDead) return;
+        currentHealth += healAmount;
+        currentHealth = Mathf.Min(currentHealth, maxHealth); // Prevent health from exceeding max
 
-        currentHealth += amount;
-        if (currentHealth > maxHealth) currentHealth = maxHealth;
-        
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
-    
-    /// <summary>
-    /// Handles the player's death sequence.
-    /// </summary>
+
     private void Die()
     {
-        isDead = true;
-        Debug.Log("Player has died. Broadcasting OnPlayerDeath event.");
-
-        // --- MODIFIED: Invoke the static event ---
-        // Any system interested in player death can listen for this.
+        Debug.Log("Player has died.");
         OnPlayerDeath?.Invoke();
+        SendPlayerDeathEvent();
 
-        // Deactivate the player object to stop movement, attacks, etc.
-        gameObject.SetActive(false);
+        // Disable player components to prevent further actions
+        GetComponent<PlayerMovement>().enabled = false;
+        GetComponent<PlayerAttack>().enabled = false;
+        gameObject.SetActive(false); // Or handle death animation/screen
     }
 
-    #region Unchanged Methods
-    public bool ConsumeMana(float amount)
+    private void SendPlayerDeathEvent()
     {
-        if (isDead) return false;
-        if (currentMana >= amount)
-        {
-            currentMana -= amount;
-            return true;
-        }
-        return false;
-    }
+        if (kafkaClient == null) return;
 
-    public void AddMana(float amount)
-    {
-        if (isDead) return;
-        currentMana += amount;
-        if (currentMana > maxMana) currentMana = maxMana;
-    }
-
-    private void SendPlayerStatusEvent()
-    {
         var payload = new Dictionary<string, object>
         {
-            { "hp", currentHealth },
-            { "mana", currentMana },
-            { "active_buffs", activeBuffs.ToList() },
-            { "active_debuffs", activeDebuffs.ToList() }
+            { "final_level", GetComponent<PlayerExperience>()?.currentLevel ?? 1 },
+            { "cause_of_death", "enemy_attack" } // Can be expanded later
         };
-
-        kafkaClient.SendGameplayEvent("player_status_event", playerId, payload);
+        kafkaClient.SendGameplayEvent("player_death_event", playerId, payload);
     }
-    #endregion
 }

@@ -1,153 +1,115 @@
 // GameClient/Assets/Scripts/Enemy/EnemySpawner.cs
-
 using UnityEngine;
+using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
-/// <summary>
-/// Manages the spawning of enemies based on EnemyData ScriptableObjects.
-/// It instantiates enemy prefabs and then initializes all necessary components
-/// (health, movement, attack) with data from the corresponding asset.
-/// </summary>
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("Spawner Configuration")]
-    [Tooltip("List of regular 'fodder' enemy types this spawner can instantiate.")]
-    public List<EnemyData> fodderEnemies;
+    [Serializable]
+    public class Wave
+    {
+        public string name;
+        public List<WaveComponent> enemies;
+        public float spawnInterval;
+    }
 
-    [Tooltip("List of 'elite' enemy types this spawner can instantiate.")]
-    public List<EnemyData> eliteEnemies;
+    [Serializable]
+    public class WaveComponent
+    {
+        public EnemyData enemyData;
+        public int count;
+    }
 
-    [Header("Spawn Timings & Limits")]
-    [Tooltip("The interval (in seconds) between spawn attempts.")]
-    public float spawnInterval = 1.0f;
+    [Header("Spawning Configuration")]
+    [SerializeField] private List<Wave> waves;
+    [SerializeField] private Transform[] spawnPoints;
+    [SerializeField] private float timeBetweenWaves = 5f;
 
-    [Tooltip("The maximum number of enemies allowed on screen at once.")]
-    public int maxEnemiesOnScreen = 50;
+    [Header("Dependencies")]
+    [Tooltip("Unique identifier for this spawner instance.")]
+    public string spawnerId = "spawner_01";
+    private KafkaClient kafkaClient;
 
-    [Header("Spawn Area")]
-    [Tooltip("The radius around the player where enemies can spawn.")]
-    public float spawnRadius = 20f;
+    private int currentWaveIndex = 0;
 
-    [Tooltip("The minimum distance from the player to spawn enemies, to avoid spawning on top of them.")]
-    public float minSpawnDistanceFromPlayer = 15f;
-
-    [Header("Elite Spawning Logic")]
-    [Tooltip("The wave number at which elites can start appearing.")]
-    public int eliteStartWave = 3;
-    [Tooltip("The chance (0 to 1) to spawn an elite instead of a regular enemy, if conditions are met.")]
-    [Range(0f, 1f)]
-    public float eliteSpawnChance = 0.1f;
-
-    private float spawnTimer;
-    private Transform playerTransform; // Cached reference to the player
+    void Awake()
+    {
+        kafkaClient = FindObjectOfType<KafkaClient>();
+        if (kafkaClient == null)
+        {
+            Debug.LogWarning("EnemySpawner: KafkaClient not found. Events will not be sent.", this);
+        }
+    }
 
     void Start()
     {
-        // Cache the player's transform at the start of the scene for performance.
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
+        if (spawnPoints.Length == 0)
         {
-            playerTransform = player.transform;
-        }
-        else
-        {
-            Debug.LogError("EnemySpawner: Player GameObject not found. Ensure player is tagged 'Player'.", this);
+            Debug.LogError("No spawn points assigned to the EnemySpawner.", this);
             enabled = false;
+            return;
         }
+        StartCoroutine(SpawnWaves());
     }
 
-    void Update()
+    private IEnumerator SpawnWaves()
     {
-        spawnTimer -= Time.deltaTime;
-
-        if (spawnTimer <= 0)
+        while (currentWaveIndex < waves.Count)
         {
-            if (GameObject.FindGameObjectsWithTag("Enemy").Length < maxEnemiesOnScreen)
+            yield return new WaitForSeconds(timeBetweenWaves);
+            StartCoroutine(SpawnWave(waves[currentWaveIndex]));
+            currentWaveIndex++;
+        }
+        Debug.Log("All waves completed.");
+    }
+
+    private IEnumerator SpawnWave(Wave wave)
+    {
+        Debug.Log("Spawning Wave: " + wave.name);
+        foreach (var component in wave.enemies)
+        {
+            for (int i = 0; i < component.count; i++)
             {
-                SpawnEnemy();
-            }
-            spawnTimer = spawnInterval;
-        }
-    }
-
-    private void SpawnEnemy()
-    {
-        EnemyData enemyToSpawnData = ChooseEnemyType();
-        if (enemyToSpawnData == null || enemyToSpawnData.visualPrefab == null) return;
-
-        Vector3 spawnPosition = GetRandomSpawnPosition();
-        if (spawnPosition == Vector3.zero) return;
-
-        GameObject enemyInstance = Instantiate(enemyToSpawnData.visualPrefab, spawnPosition, Quaternion.identity);
-
-        // --- Initialize ALL enemy components from the data asset ---
-
-        // Initialize Health
-        EnemyHealth enemyHealth = enemyInstance.GetComponent<EnemyHealth>();
-        if (enemyHealth != null)
-        {
-            enemyHealth.Initialize(enemyToSpawnData);
-        }
-
-        // Initialize Movement
-        EnemyMovement enemyMovement = enemyInstance.GetComponent<EnemyMovement>();
-        if (enemyMovement != null)
-        {
-            enemyMovement.Initialize(playerTransform, enemyToSpawnData.moveSpeed);
-        }
-
-        // Initialize Attack
-        EnemyAttack enemyAttack = enemyInstance.GetComponent<EnemyAttack>();
-        if (enemyAttack != null)
-        {
-            enemyAttack.Initialize(enemyToSpawnData.baseDamage);
-        }
-    }
-
-    private EnemyData ChooseEnemyType()
-    {
-        bool canSpawnElite = eliteEnemies.Any() &&
-                             GameManager.Instance != null &&
-                             GameManager.Instance.currentWave >= eliteStartWave &&
-                             Random.value < eliteSpawnChance;
-
-        if (canSpawnElite)
-        {
-            return eliteEnemies[Random.Range(0, eliteEnemies.Count)];
-        }
-
-        if (fodderEnemies.Any())
-        {
-            return fodderEnemies[Random.Range(0, fodderEnemies.Count)];
-        }
-
-        return null;
-    }
-
-    private Vector3 GetRandomSpawnPosition()
-    {
-        if (playerTransform == null) return Vector3.zero;
-
-        for (int i = 0; i < 10; i++)
-        {
-            Vector2 randomDirection = Random.insideUnitCircle.normalized;
-            Vector3 spawnPos = playerTransform.position + new Vector3(randomDirection.x, randomDirection.y, 0) * spawnRadius;
-
-            if (Vector3.Distance(spawnPos, playerTransform.position) >= minSpawnDistanceFromPlayer)
-            {
-                return spawnPos;
+                SpawnEnemy(component.enemyData);
+                yield return new WaitForSeconds(wave.spawnInterval);
             }
         }
-        return Vector3.zero;
     }
 
-    void OnDrawGizmosSelected()
+    private void SpawnEnemy(EnemyData enemyData)
     {
-        if (playerTransform == null) return;
-        Gizmos.color = new Color(1, 0, 0, 0.25f);
-        Gizmos.DrawWireSphere(playerTransform.position, spawnRadius);
-        Gizmos.color = new Color(1, 1, 0, 0.25f);
-        Gizmos.DrawWireSphere(playerTransform.position, minSpawnDistanceFromPlayer);
+        Transform spawnPoint = spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)];
+        GameObject enemyInstance = Instantiate(enemyData.enemyPrefab, spawnPoint.position, Quaternion.identity);
+
+        // Initialize components on the spawned enemy
+        var enemyHealth = enemyInstance.GetComponent<EnemyHealth>();
+        if (enemyHealth) enemyHealth.Initialize(enemyData);
+
+        var enemyMovement = enemyInstance.GetComponent<EnemyMovement>();
+        if (enemyMovement) enemyMovement.Initialize(enemyData);
+
+        var enemyAttack = enemyInstance.GetComponent<EnemyAttack>();
+        if (enemyAttack)
+        {
+            // [FIX] Pass the entire EnemyData object to the Initialize method
+            enemyAttack.Initialize(enemyData);
+        }
+
+        SendEnemySpawnEvent(enemyInstance.GetInstanceID().ToString(), enemyData.enemyID);
+    }
+
+    private void SendEnemySpawnEvent(string instanceId, string enemyType)
+    {
+        if (kafkaClient == null) return;
+
+        var payload = new Dictionary<string, object>
+        {
+            { "spawner_id", spawnerId },
+            { "enemy_instance_id", instanceId },
+            { "enemy_type", enemyType },
+            { "wave", GameManager.Instance.currentWave }
+        };
+        kafkaClient.SendGameplayEvent("enemy_spawn_event", "game_logic", payload);
     }
 }

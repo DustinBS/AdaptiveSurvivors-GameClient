@@ -1,0 +1,54 @@
+/* GameClient/Assets/UI/InteractionPromptUI.uss */
+
+/* The root container for the prompt.
+    It's set to be invisible and non-interactive by default.
+    The C# controller will handle positioning and visibility.
+*/
+.prompt-container {
+    flex-direction: column; /* Stack the key icon and action label vertically */
+    align-items: center;    /* Center them horizontally */
+    position: absolute;
+    display: none; /* Hidden by default, changed to 'flex' by C# */
+    /* Prevents the UI from capturing mouse events */
+    picking-mode: ignore;
+}
+
+/* The white square for the key icon.
+    Uses padding and a border-radius to create the soft square look.
+    A drop-shadow effect is used for depth.
+*/
+.key-icon {
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    /* Simple drop shadow: x-offset y-offset blur-radius color */
+    -unity-slice-left: 0;
+    -unity-slice-top: 0;
+    -unity-slice-right: 0;
+    -unity-slice-bottom: 0;
+    -unity-background-image-tint-color: rgb(0, 0, 0);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+/* The text label inside the key icon ('E').
+*/
+.key-label {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: black;
+}
+
+/* The text label for the action description.
+    Uses a text-shadow to create an outline for better readability.
+*/
+.action-label {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: white;
+    margin-top: 5px;
+    /* Creates a subtle black outline for the text */
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+

@@ -1,47 +1,105 @@
 // GameClient/Assets/Scripts/Player/PlayerInteraction.cs
 using UnityEngine;
+using System.Linq; // Required for OrderBy
 
+[RequireComponent(typeof(InteractionPromptController))]
 public class PlayerInteraction : MonoBehaviour
 {
     [Header("Interaction Settings")]
     [Tooltip("The point from which the interaction check is cast.")]
     [SerializeField] private Transform interactionPoint;
     [Tooltip("The radius of the interaction check circle.")]
-    [SerializeField] private float interactionRadius = 0.5f;
+    [SerializeField] private float interactionRadius = 1.5f;
     [Tooltip("The layer(s) containing interactable objects.")]
     [SerializeField] private LayerMask interactableLayer;
 
+    // --- Private State ---
+    private InteractionPromptController interactionPromptController;
+    // The single interactable object that is closest to the player and in range.
+    private IInteractable closestInteractable;
+
+    private void Awake()
+    {
+        // Get a reference to the prompt controller on the same GameObject.
+        interactionPromptController = GetComponent<InteractionPromptController>();
+    }
+
     private void OnEnable()
     {
-        // Subscribe to the central input manager's interact event
         PlayerInputManager.OnInteract += HandleInteract;
     }
 
     private void OnDisable()
     {
-        // Unsubscribe to prevent errors
         PlayerInputManager.OnInteract -= HandleInteract;
     }
 
-    /// <summary>
-    /// Called when the PlayerInputManager broadcasts an interact event.
-    /// </summary>
-    private void HandleInteract()
+    private void Update()
     {
-        // Check for interactable objects within the defined radius
-        var collider = Physics2D.OverlapCircle(interactionPoint.position, interactionRadius, interactableLayer);
+        // This loop runs every frame to check for the nearest interactable object.
+        FindAndDisplayClosestInteractable();
+    }
 
-        if (collider != null)
+    private void FindAndDisplayClosestInteractable()
+    {
+        // Find all colliders within the interaction radius on the specified layer.
+        var colliders = Physics2D.OverlapCircleAll(interactionPoint.position, interactionRadius, interactableLayer);
+
+        IInteractable newClosest = null;
+        float closestDistance = float.MaxValue;
+
+        if (colliders.Length > 0)
         {
-            // Try to get the IInteractable component and trigger the interaction
-            if (collider.TryGetComponent<IInteractable>(out var interactable))
+            // Iterate through all found colliders to find the closest valid one.
+            foreach (var col in colliders)
             {
-                interactable.Interact();
+                if (col.TryGetComponent<IInteractable>(out var interactable))
+                {
+                    float distance = Vector2.Distance(interactionPoint.position, col.transform.position);
+                    if (distance < closestDistance)
+                    {
+                        closestDistance = distance;
+                        newClosest = interactable;
+                    }
+                }
             }
+        }
+
+        // Check if the closest interactable has changed since the last frame.
+        if (newClosest != closestInteractable)
+        {
+            // If a new interactable is found, show its prompt.
+            if (newClosest != null)
+            {
+                // We need to get the transform from the component to position the UI.
+                var targetTransform = (newClosest as MonoBehaviour)?.transform;
+                if (targetTransform != null)
+                {
+                    interactionPromptController.ShowPrompt(targetTransform, newClosest.GetInteractionPrompt());
+                }
+            }
+            else
+            {
+                // If there's no new interactable (i.e., we've moved out of range), hide the prompt.
+                interactionPromptController.HidePrompt();
+            }
+
+            closestInteractable = newClosest;
         }
     }
 
-    // Optional: Draw a visual gizmo in the editor to see the interaction radius
+    /// <summary>
+    /// Called by the PlayerInputManager. Executes the interaction on the closest object.
+    /// </summary>
+    private void HandleInteract()
+    {
+        // If there is a valid closest interactable, call its Interact method.
+        if (closestInteractable != null)
+        {
+            closestInteractable.Interact();
+        }
+    }
+
     private void OnDrawGizmos()
     {
         if (interactionPoint == null) return;
