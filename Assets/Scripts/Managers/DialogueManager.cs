@@ -94,7 +94,6 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     private void OnSubmitPerformed(InputAction.CallbackContext context)
     {
-        Debug.Log("Submit button pressed in DialogueManager.");
         if (currentConversation != null)
         {
             AdvanceConversation();
@@ -106,7 +105,6 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     private void AdvanceConversation()
     {
-        Debug.Log($"Advancing conversation: {currentConversation.name}, Line Index: {currentLineIndex}");
         if (isDisplayingLine)
         {
             FinishLine();
