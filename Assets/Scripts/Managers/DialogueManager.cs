@@ -157,6 +157,8 @@ public class DialogueManager : MonoBehaviour
     {
         if (line.playerResponses != null && line.playerResponses.Count > 0)
         {
+            uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.Player);
+            uiController.SetDialogueLine(playerData.playerName, "...");
             currentState = DialogueState.AwaitingChoice;
             uiController.ShowContinuePrompt(false);
             uiController.DisplayChoices(line.playerResponses);

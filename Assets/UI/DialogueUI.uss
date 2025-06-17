@@ -97,7 +97,6 @@
 .speaker-label {
     position: absolute;
     top: -25px;
-    left: 20px;
     padding: 5px 25px;
     background-color: var(--color-dialogue-nameplate);
     color: var(--color-text-accent);
@@ -109,6 +108,19 @@
     border-bottom-width: 0;
     border-color: var(--color-dialogue-border);
 }
+
+.speaker-is-player {
+    /* Positions the label near the left (player) portrait. */
+    left: 20px;
+    right: auto;
+}
+
+.speaker-is-npc {
+    /* Positions the label near the right (NPC) portrait. */
+    right: 20px;
+    left: auto;
+}
+
 
 .dialogue-text {
     color: var(--color-text-primary);
