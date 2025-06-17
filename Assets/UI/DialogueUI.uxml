@@ -1,22 +1,19 @@
-<!-- GameClient/Assets/UI/DialogueUI.uxml -->
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <ui:Style src="/Assets/UI/DialogueUI.uss" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/DialogueUI.uss?fileID=7433441132597879392&amp;guid=8f01dd4ca690c3c4c8df335e458fd0fe&amp;type=3#DialogueUI" />
     <ui:VisualElement name="DialogueRoot" class="dialogue-root">
         <ui:VisualElement name="TopBar" class="letterbox-bar top-bar" />
-        <ui:VisualElement name="DialogueBox" class="dialogue-box">
-            <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
-            <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
-        </ui:VisualElement>
-        <ui:VisualElement name="DialogueContainer" class="dialogue-container">
-            <ui:VisualElement style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
-                <ui:VisualElement name="PlayerPortrait" class="portrait left-portrait" />
-                <ui:VisualElement name="NPCPortrait" class="portrait right-portrait" />
-            </ui:VisualElement>
-            <ui:Label name="SpeakerLabel" text="Speaker Name" class="speaker-label" />
-            <ui:VisualElement name="TextContainer" class="text-container">
-                <ui:Label name="DialogueText" text="This is where the dialogue text will appear..." class="dialogue-text" />
-            </ui:VisualElement>
-        </ui:VisualElement>
         <ui:VisualElement name="BottomBar" class="letterbox-bar bottom-bar" />
+        <ui:VisualElement name="BottomAreaContainer" class="bottom-area-container" style="height: 205px; bottom: 32px; right: 0; left: 1px;">
+            <ui:VisualElement name="PlayerPortrait" class="portrait" style="height: 142px;" />
+            <ui:VisualElement name="DialogueAndChoicesContainer" class="dialogue-and-choices-container" style="height: 235px;">
+                <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+                <ui:VisualElement name="DialogueBox" class="dialogue-box" style="height: 113px; top: 123px; left: -1px;">
+                    <ui:Label name="SpeakerLabel" text="Speaker Name" class="speaker-label" style="top: -25px; left: -2px;" />
+                    <ui:Label name="DialogueText" text="This is where the dialogue text will appear..." class="dialogue-text" />
+                    <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="NPCPortrait" class="portrait" style="height: 143px;" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
