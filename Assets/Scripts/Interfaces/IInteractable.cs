@@ -1,16 +1,18 @@
 // GameClient/Assets/Scripts/Interfaces/IInteractable.cs
 
 /// <summary>
-/// Defines a contract for any object that the player can interact with.
-/// GameObjects like NPCs, portals, chests, or quest items will implement this interface.
-/// This ensures that the PlayerInteraction script can talk to any of them
-/// through a common method, promoting a clean and decoupled architecture.
+/// Defines the contract for any object that the player can interact with.
 /// </summary>
 public interface IInteractable
 {
     /// <summary>
-    /// This method is called by the PlayerInteraction script when the player
-    /// presses the interact key while near an object implementing this interface.
+    /// Executes the interaction logic for this object.
     /// </summary>
     void Interact();
+
+    /// <summary>
+    /// Gets the UI text to display when this object is in range.
+    /// </summary>
+    /// <returns>A string representing the action, e.g., "Talk to Sage" or "Enter Portal".</returns>
+    string GetInteractionPrompt();
 }

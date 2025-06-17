@@ -43,4 +43,17 @@ public class NPCController : MonoBehaviour, IInteractable
         // This keeps the NPC completely decoupled from the UI and dialogue flow logic.
         DialogueManager.Instance.StartConversation(startingDialogue, this);
     }
+    /// <summary>
+    /// Provides the dynamic interaction prompt text for this NPC.
+    /// </summary>
+    /// <returns>A formatted string with the NPC's name.</returns>
+    public string GetInteractionPrompt()
+    {
+        return $"Talk to {npcData.npcName}";
+    }
+
+    public InteractionType GetInteractionType()
+    {
+        return InteractionType.Chat;
+    }
 }

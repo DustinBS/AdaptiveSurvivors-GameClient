@@ -1,158 +1,102 @@
 /* GameClient/Assets/UI/DialogueUI.uss */
 
-/* --- Root Container --- */
-/* This is the master container. It's hidden by default. */
 .dialogue-root {
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    display: none; /* C# script will change this to 'flex' to show the UI */
+    display: none;
     justify-content: center;
     align-items: center;
 }
 
-/* --- Cinematic Letterboxing --- */
 .letterbox-bar {
     position: absolute;
     width: 100%;
-    height: 12%; /* Adjust height of cinematic bars as needed */
-    background-color: rgb(0, 0, 0);
+    height: 12%;
+    background-color: rgb(0, 0, 0); /* Note: Kept as pure black for cinematic effect */
 }
 
-.top-bar {
-    top: 0;
-}
+.top-bar { top: 0; }
+.bottom-bar { bottom: 0; }
 
-.bottom-bar {
-    bottom: 0;
-}
-
-/* --- Main Dialogue Elements Container --- */
 .dialogue-container {
     flex-direction: row;
-    align-items: flex-end; /* Aligns portraits to the bottom of the container */
+    align-items: flex-end;
     width: 100%;
     height: 100%;
     padding: 0 50px;
 }
 
-/* --- Character Portraits --- */
 .portrait {
-    /* Set a fixed aspect ratio for portraits to prevent distortion */
     aspect-ratio: 1;
     height: 45%;
     max-height: 400px;
-    -unity-background-scale-mode: scale-and-crop; /* Crops image to fit, maintains aspect ratio */
-
-    /* Smooth transition for the dimming effect */
+    -unity-background-scale-mode: scale-and-crop;
     transition-property: unity-background-image-tint-color;
     transition-duration: 0.3s;
     transition-timing-function: ease-in-out;
-
-    /* Default tint is white (no tint) */
-    unity-background-image-tint-color: white;
+    -unity-background-image-tint-color: var(--color-text-primary);
 }
 
-/* Added via C# to dim the portrait of the character who is NOT speaking */
 .inactive-speaker {
-    unity-background-image-tint-color: rgb(100, 100, 100);
+    unity-background-image-tint-color: var(--color-button-background-hover);
 }
 
-/* --- Central Dialogue Box --- */
 .dialogue-box {
     position: absolute;
-    bottom: 14%; /* Position it just above the bottom letterbox bar */
+    bottom: 14%;
     left: 20%;
     right: 20%;
     height: 28%;
-    background-color: rgba(10, 15, 20, 0.85);
-    border-color: rgb(150, 150, 170);
+    background-color: var(--color-dialogue-background);
+    border-color: var(--color-dialogue-border);
     border-width: 2px;
     border-radius: 10px;
     padding: 15px 25px;
 }
 
-/* --- Speaker Nameplate --- */
 .speaker-label {
     position: absolute;
-    top: -25px; /* Sits on top of the dialogue box */
+    top: -25px;
     padding: 5px 25px;
-    background-color: rgb(30, 40, 50);
-    color: rgb(255, 220, 150);
+    background-color: var(--color-dialogue-nameplate);
+    color: var(--color-text-accent);
     -unity-font-style: bold;
-    font-size: 24px;
+    font-size: var(--font-size-large);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     border-width: 2px;
     border-bottom-width: 0;
-    border-color: rgb(150, 150, 170);
+    border-color: var(--color-dialogue-border);
 }
 
-/* Add these classes via C# to position the nameplate */
-.speaker-is-player {
-    left: 20px;
-}
-
-.speaker-is-npc {
-    right: 20px;
-}
-
-/* --- Text & Choices --- */
-.text-container {
-    flex-direction: row;
-    height: 70%;
-}
+.speaker-is-player { left: 20px; }
+.speaker-is-npc { right: 20px; }
 
 .dialogue-text {
-    color: white;
-    font-size: 24px;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-large);
     white-space: normal;
     -unity-text-align: upper-left;
     flex-grow: 1;
 }
 
-.continue-prompt {
-    /* A simple triangle as a continue prompt */
-    width: 20px;
-    height: 20px;
-    background-color: white;
-    -unity-background-image-tint-color: rgba(255, 255, 255, 0.7);
-    rotate: 45deg;
-    margin-left: 10px;
-    display: none; /* Show with C# when text is finished typing */
-}
-
-.choice-button-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(10, 15, 20, 0.9);
-    padding: 20px;
-}
-
 .dialogue-choice-button {
-    font-size: 20px;
+    font-size: 20px; /* Kept specific size as it differs from theme sizes */
     margin: 8px 0;
     padding: 12px;
     width: 80%;
-    color: white;
-    background-color: rgba(44, 62, 80, 0.9);
-    border-left-color: rgb(52, 152, 219);
-    border-right-color: rgb(52, 152, 219);
-    border-top-color: rgb(52, 152, 219);
-    border-bottom-color: rgb(52, 152, 219);
+    color: var(--color-text-primary);
+    background-color: var(--color-dialogue-choice-background);
+    border-color: var(--color-dialogue-choice-border);
     border-width: 2px;
     border-radius: 8px;
     transition-duration: 0.1s;
 }
 
 .dialogue-choice-button:hover {
-    background-color: rgba(52, 152, 219, 0.9);
-    border-color: white;
+    background-color: var(--color-dialogue-choice-hover);
+    border-color: var(--color-text-primary);
 }

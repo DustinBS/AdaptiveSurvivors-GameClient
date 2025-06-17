@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="InteractionPrompt" class="interaction-prompt-container" style="flex-direction: row;">
+        <ui:VisualElement name="Icon" class="interaction-prompt-icon" style="height: 35px; width: 39px;" />
+        <ui:Label name="ActionText" text="Interact" class="interaction-prompt-text" />
+    </ui:VisualElement>
+</ui:UXML>

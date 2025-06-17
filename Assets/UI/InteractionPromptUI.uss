@@ -1,0 +1,35 @@
+/* GameClient/Assets/UI/InteractionPromptUI.uss */
+
+.interaction-prompt-container {
+    flex-direction: row;
+    align-items: center;
+    position: absolute;
+
+    /* Using a variable from our new Theme.uss file */
+    background-color: var(--color-background-dark);
+
+    padding: 8px 12px;
+    border-radius: 12px;
+
+    transition-duration: 0.15s;
+    transition-property: opacity;
+    transition-timing-function: ease-in-out;
+    opacity: 0;
+    picking-mode: Ignore;
+}
+
+.interaction-prompt-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    -unity-background-image-tint-color: var(--color-text-primary);
+}
+
+.interaction-prompt-text {
+    /* Font size now uses the variable from our theme file. */
+    font-size: var(--font-size-large);
+    -unity-font-style: bold;
+    color: var(--color-text-primary);
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}

@@ -3,14 +3,19 @@ using UnityEngine;
 
 /// <summary>
 /// A singleton manager that centralizes player input handling.
-/// It holds the single instance of PlayerControls and provides public
-/// methods to switch between input action maps (e.g., Player, UI).
+/// It holds the PlayerControls instance and manages the active action map.
 /// </summary>
 public class PlayerInputManager : MonoBehaviour
 {
     public static PlayerInputManager Instance { get; private set; }
 
     public PlayerControls PlayerControls { get; private set; }
+
+    /// <summary>
+    /// Returns true if the Player action map is currently enabled.
+    /// This serves as a reliable, central source of truth for game state.
+    /// </summary>
+    public bool IsPlayerControlsEnabled => PlayerControls.Player.enabled;
 
     private void Awake()
     {
@@ -27,13 +32,11 @@ public class PlayerInputManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // Default to player controls when the game starts or manager is enabled.
         SwitchToPlayerControls();
     }
 
     private void OnDisable()
     {
-        // Disable all maps when the manager is disabled to prevent lingering input.
         PlayerControls.Player.Disable();
         PlayerControls.UI.Disable();
     }

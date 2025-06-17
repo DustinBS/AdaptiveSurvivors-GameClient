@@ -1,0 +1,38 @@
+/* GameClient/Assets/UI/Theme.uss */
+/* This file acts as a global configuration for your UI's visual style. */
+
+:root {
+    /* -- FONT SIZES -- */
+    --font-size-normal: 16px;
+    --font-size-large: 24px;
+    --font-size-title: 32px;
+    
+    /* -- COLORS: TEXT -- */
+    --color-text-primary: white;
+    --color-text-off-white: rgb(220, 220, 220);
+    --color-text-accent: rgb(255, 220, 150); /* Gold for speaker name */
+
+    /* -- COLORS: GENERIC UI -- */
+    --color-background-overlay: rgba(0, 0, 0, 0.7);
+    --color-background-panel: rgb(45, 45, 45);
+    --color-border-primary: rgb(80, 80, 80);
+    --color-border-secondary: rgb(120, 120, 120);
+    
+    /* -- COLORS: BUTTONS -- */
+    --color-button-background: rgb(80, 80, 80);
+    --color-button-background-hover: rgb(100, 100, 100);
+    --color-button-background-active: rgb(60, 60, 60);
+
+    /* -- COLORS: DIALOGUE SPECIFIC -- */
+    --color-dialogue-background: rgba(10, 15, 20, 0.85);
+    --color-dialogue-border: rgb(150, 150, 170);
+    --color-dialogue-nameplate: rgb(30, 40, 50);
+    --color-dialogue-choice-background: rgba(44, 62, 80, 0.9);
+    --color-dialogue-choice-border: rgb(52, 152, 219);
+    --color-dialogue-choice-hover: rgba(52, 152, 219, 0.9);
+
+    /* -- COLORS: HEALTH BAR -- */
+    --color-health-foreground: rgb(220, 40, 40);
+    --color-health-background: rgb(40, 40, 40);
+    --color-health-border: rgb(10, 10, 10);
+}
