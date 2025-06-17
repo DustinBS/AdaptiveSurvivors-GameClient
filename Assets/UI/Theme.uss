@@ -1,12 +1,18 @@
 /* GameClient/Assets/UI/Theme.uss */
-/* This file acts as a global configuration for your UI's visual style. */
+/*
+This file acts as a global configuration for your UI's visual style.
+It imports Unity's default theme and then overrides it with custom variables.
+*/
 
+@import url("unity-theme://default");
+
+/* --- Variable Overrides & Additions --- */
 :root {
     /* -- FONT SIZES -- */
-    --font-size-normal: 16px;
-    --font-size-large: 24px;
+    --font-size-normal: 12px;
+    --font-size-large: 18px;
     --font-size-title: 32px;
-    
+
     /* -- COLORS: TEXT -- */
     --color-text-primary: white;
     --color-text-off-white: rgb(220, 220, 220);
@@ -17,7 +23,7 @@
     --color-background-panel: rgb(45, 45, 45);
     --color-border-primary: rgb(80, 80, 80);
     --color-border-secondary: rgb(120, 120, 120);
-    
+
     /* -- COLORS: BUTTONS -- */
     --color-button-background: rgb(80, 80, 80);
     --color-button-background-hover: rgb(100, 100, 100);

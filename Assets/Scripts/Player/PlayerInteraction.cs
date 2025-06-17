@@ -5,8 +5,8 @@ using UnityEngine.SceneManagement;
 using System.Linq;
 
 /// <summary>
-/// Handles player interaction with IInteractable objects. This version is state-aware
-/// by checking the active control map in the PlayerInputManager.
+/// Handles player interaction with IInteractable objects. This version is state-aware,
+/// robust against scene changes, and uses LateUpdate for jitter-free UI positioning.
 /// </summary>
 public class PlayerInteraction : MonoBehaviour
 {
@@ -19,11 +19,11 @@ public class PlayerInteraction : MonoBehaviour
 
     // --- State ---
     private IInteractable _closestInteractable;
+    private Transform _closestInteractableTransform; // Cached transform for LateUpdate
     private readonly Collider2D[] _colliders = new Collider2D[10];
 
     private void Awake()
     {
-        // This defensive check is crucial for a robust system.
         if (PlayerInputManager.Instance == null)
         {
             Debug.LogError("PlayerInteraction: PlayerInputManager.Instance is null. This script cannot function.", this);
@@ -53,37 +53,46 @@ public class PlayerInteraction : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Attempt to find the new scene's prompt controller. It's okay if it's null.
         _interactionPromptController = FindObjectOfType<InteractionPromptController>();
 
-        // Always reset state on scene load to prevent prompts from sticking.
+        // Reset state on scene load to prevent prompts from sticking.
         _closestInteractable = null;
+        _closestInteractableTransform = null;
         _interactionPromptController?.HidePrompt();
     }
 
     private void Update()
     {
-        // The core of the fix: check the input map directly.
-        // If player controls are not enabled, we should not be able to interact.
+        // If player controls are not enabled, hide the prompt and do nothing.
         if (!PlayerInputManager.Instance.IsPlayerControlsEnabled)
         {
-            // If we switch to UI mode while a prompt is visible, hide it.
             if (_closestInteractable != null)
             {
                 _interactionPromptController?.HidePrompt();
                 _closestInteractable = null;
+                _closestInteractableTransform = null;
             }
             return;
         }
 
-        // If we get here, player controls are active. Proceed with finding interactables.
         FindAndHandleClosestInteractable();
+    }
+
+    /// <summary>
+    /// Jitter-Fix: The UI position is updated in LateUpdate, which runs *after* all
+    /// game logic and animation has finished for the frame. This ensures the UI
+    /// is positioned based on the object's final position for that frame.
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (_closestInteractable != null && _interactionPromptController != null)
+        {
+            _interactionPromptController.UpdatePosition(_closestInteractableTransform);
+        }
     }
 
     private void OnInteractPerformed(InputAction.CallbackContext context)
     {
-        // The Update loop's guard prevents this from being called at the wrong time,
-        // but an extra check here is good defensive practice.
         if (_closestInteractable != null && PlayerInputManager.Instance.IsPlayerControlsEnabled)
         {
             _closestInteractable.Interact();
@@ -121,6 +130,8 @@ public class PlayerInteraction : MonoBehaviour
         if (newClosestInteractable != _closestInteractable)
         {
             _closestInteractable = newClosestInteractable;
+            // Cache the transform of the new closest interactable.
+            _closestInteractableTransform = newClosestTransform;
 
             if (_closestInteractable == null)
             {
@@ -128,7 +139,8 @@ public class PlayerInteraction : MonoBehaviour
             }
             else
             {
-                _interactionPromptController.ShowPrompt(_closestInteractable.GetInteractionPrompt(), newClosestTransform);
+                // We no longer pass the transform here; it's handled by LateUpdate.
+                _interactionPromptController.ShowPrompt(_closestInteractable.GetInteractionPrompt());
             }
         }
     }

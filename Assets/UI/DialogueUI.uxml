@@ -1,60 +1,22 @@
 <!-- GameClient/Assets/UI/DialogueUI.uxml -->
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
-    <!--
-        This is the root container for the entire dialogue system.
-        It's initially hidden and will be made visible by the C# controller.
-        It's set to fill the entire screen so its children can be positioned correctly.
-    -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="/Assets/UI/DialogueUI.uss" />
     <ui:VisualElement name="DialogueRoot" class="dialogue-root">
-
-        <!-- Cinematic Letterbox Bars -->
         <ui:VisualElement name="TopBar" class="letterbox-bar top-bar" />
-        <ui:VisualElement name="BottomBar" class="letterbox-bar bottom-bar" />
-
-        <!--
-            This container holds the main dialogue elements (portraits, text box)
-            and is centered within the screen area left by the letterbox bars.
-        -->
+        <ui:VisualElement name="DialogueBox" class="dialogue-box">
+            <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+            <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
+        </ui:VisualElement>
         <ui:VisualElement name="DialogueContainer" class="dialogue-container">
-
-            <!--
-                Character Portraits
-                - The left is always the Player.
-                - The right is always the NPC.
-                - The C# script will set their background images at runtime.
-            -->
-            <ui:VisualElement name="PlayerPortrait" class="portrait left-portrait" />
-
-            <!-- This spacer element ensures the portraits are pushed to the sides -->
-            <ui:VisualElement style="flex-grow: 1;" />
-
-            <ui:VisualElement name="NPCPortrait" class="portrait right-portrait" />
-
-            <!--
-                The main dialogue box, absolutely positioned to overlap the center-bottom.
-                This allows portraits to appear "behind" it.
-            -->
-            <ui:VisualElement name="DialogueBox" class="dialogue-box">
-
-                <!--
-                    A single label for the speaker's name. The C# script will set its
-                    text and the USS will position it based on who is talking.
-                -->
-                <ui:Label name="SpeakerLabel" text="Speaker Name" class="speaker-label" />
-
-                <!-- Container for dialogue text and the continue prompt -->
-                <ui:VisualElement name="TextContainer" class="text-container">
-                    <ui:Label name="DialogueText" text="This is where the dialogue text will appear, character by character..." class="dialogue-text" />
-                    <!-- The continue prompt, hidden by default -->
-                    <ui:VisualElement name="ContinuePrompt" class="continue-prompt" />
-                </ui:VisualElement>
-
-                <!--
-                    This container will be populated with player choice buttons from the C# script
-                    when a choice is available.
-                -->
-                <ui:VisualElement name="ChoiceButtonContainer" class="choice-button-container" />
+            <ui:VisualElement style="flex-grow: 1; flex-direction: row; justify-content: space-between;">
+                <ui:VisualElement name="PlayerPortrait" class="portrait left-portrait" />
+                <ui:VisualElement name="NPCPortrait" class="portrait right-portrait" />
+            </ui:VisualElement>
+            <ui:Label name="SpeakerLabel" text="Speaker Name" class="speaker-label" />
+            <ui:VisualElement name="TextContainer" class="text-container">
+                <ui:Label name="DialogueText" text="This is where the dialogue text will appear..." class="dialogue-text" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <ui:VisualElement name="BottomBar" class="letterbox-bar bottom-bar" />
     </ui:VisualElement>
 </ui:UXML>

@@ -1,6 +1,8 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:VisualElement name="InteractionPrompt" class="interaction-prompt-container" style="flex-direction: row;">
-        <ui:VisualElement name="Icon" class="interaction-prompt-icon" style="height: 35px; width: 39px;" />
+<!-- GameClient/Assets/UI/InteractionPromptUI.uxml -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="/Assets/UI/InteractionPromptUI.uss" />
+    <ui:VisualElement name="InteractionPrompt" class="interaction-prompt-container">
+        <ui:VisualElement name="Icon" class="interaction-prompt-icon" />
         <ui:Label name="ActionText" text="Interact" class="interaction-prompt-text" />
     </ui:VisualElement>
 </ui:UXML>
