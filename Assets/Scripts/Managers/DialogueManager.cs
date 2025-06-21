@@ -5,6 +5,7 @@ using UnityEngine.UIElements;
 using System.Collections;
 using UnityEngine.InputSystem;
 using System.Collections.Generic; // Added for List<T>
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// A stateful singleton manager that controls the interactive dialogue system.
@@ -82,51 +83,38 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
     void OnDisable()
     {
+        // Unsubscribe from both sceneLoaded and player input to prevent memory leaks.
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (playerControls != null)
         {
-            Debug.Log("DialogueManager: Unregistering input action for Submit.");
             playerControls.UI.Submit.performed -= OnSubmitPerformed;
         }
     }
 
-    // Public method for UI controllers to register themselves.
-    public void RegisterUIController(DialogueUIController controller)
+    // This method runs every time a new scene is loaded.
+    // It mirrors the logic from PlayerInteraction.cs script.
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // First, always unsubscribe from the old controller, if one exists.
-        // This prevents duplicate subscriptions and cleans up any lingering references.
+        // Find the UI controller in the newly loaded scene.
+        uiController = FindObjectOfType<DialogueUIController>();
+
         if (uiController != null)
         {
-            uiController.OnChoiceSelected -= OnPlayerResponseClicked;
-        }
-
-        // Now, assign the new controller.
-        uiController = controller;
-
-        // Subscribe to the new controller's event if it's not null.
-        if (uiController != null)
-        {
+            // If we found one, subscribe to its event.
             uiController.OnChoiceSelected += OnPlayerResponseClicked;
+            Debug.Log("DialogueManager successfully found and connected to DialogueUIController in scene: " + scene.name);
         }
-        // This else block is a safeguard for conversations that might be active during a scene transition.
-        else if (currentState != DialogueState.Inactive)
+        else
         {
-            Debug.LogWarning("A new scene was loaded, but no DialogueUIController was found. Ending active conversation.");
-            EndConversation();
-        }
-    }
-
-    // Public method for UI controllers to unregister themselves.
-    public void UnregisterUIController(DialogueUIController controller)
-    {
-        if (uiController == controller)
-        {
-            if (uiController != null)
-            {
-                uiController.OnChoiceSelected -= OnPlayerResponseClicked;
-            }
-            uiController = null;
+            // If the new scene has no dialogue UI, we just log it for debugging.
+            Debug.Log("No DialogueUIController found in scene: " + scene.name);
         }
     }
 
@@ -248,15 +236,19 @@ public class DialogueManager : MonoBehaviour
 
     private void OnPlayerResponseClicked(PlayerResponse response)
     {
-        if (currentState != DialogueState.AwaitingChoice) return;
+        Debug.Log($"[Step 2] DialogueManager received event for response: '{response.responseText}'");
+        if (currentState != DialogueState.AwaitingChoice || uiController == null)
+        {
+            Debug.LogWarning($"[Step 3] Guard clause triggered. Current state: {currentState}. Aborting response.");
+            return;
+        }
+        Debug.Log($"[Step 4] State is correct ({currentState}). Proceeding with response.");
 
         uiController.HideChoices();
-
         if (response.nextDialogue != null)
         {
             currentConversation = response.nextDialogue;
-            currentLineIndex = -1;
-            AdvanceConversation();
+            currentLineIndex = -1; AdvanceConversation();
         }
         else
         {
@@ -307,7 +299,7 @@ public class DialogueManager : MonoBehaviour
         if (useDebugMode)
         {
             // Simulate a long network delay for testing.
-            yield return new WaitForSeconds(5.0f);
+            yield return new WaitForSeconds(2.0f);
             generatedText = "This is a dynamically generated response after a long wait!";
         }
         else

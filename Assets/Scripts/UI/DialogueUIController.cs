@@ -50,29 +50,6 @@ public class DialogueUIController : MonoBehaviour
         ShowDialogue(false);
     }
 
-    // OnEnable is called when the object becomes active, including after a scene load.
-    void OnEnable()
-    {
-        // Find the singleton instance and register this UI controller with it.
-        if (DialogueManager.Instance != null)
-        {
-            Debug.Log("DialogueUIController registered with DialogueManager.");
-            DialogueManager.Instance.RegisterUIController(this);
-        }
-    }
-
-    // OnDisable is called when the object becomes inactive, including when it's about to be destroyed by a scene change.
-    void OnDisable()
-    {
-        // Important: Unregister itself to prevent memory leaks and null reference errors
-        // when the DialogueManager tries to call a method on a destroyed object.
-        if (DialogueManager.Instance != null)
-        {
-            Debug.Log("DialogueUIController unregistered from DialogueManager.");
-            DialogueManager.Instance.UnregisterUIController(this);
-        }
-    }
-
     /// <summary>
     /// Shows or hides the entire dialogue UI.
     /// </summary>
@@ -142,10 +119,15 @@ public class DialogueUIController : MonoBehaviour
 
         foreach (var choice in choices)
         {
-            var button = new Button(() => OnChoiceSelected?.Invoke(choice))
+            var button = new Button(() =>
+            {
+                Debug.Log($"[Step 1] Choice button '{choice.responseText}' was physically clicked.");
+                OnChoiceSelected?.Invoke(choice);
+            })
             {
                 text = choice.responseText
             };
+
             button.AddToClassList(CHOICE_BUTTON_CLASS);
             choiceButtonContainer.Add(button);
         }
