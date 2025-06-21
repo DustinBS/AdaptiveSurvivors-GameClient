@@ -1,0 +1,26 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/CharacterSelectUI.uss?fileID=7433441132597879392&amp;guid=987e0a11beb19bd45a548b08585d5813&amp;type=3#CharacterSelectUI" />
+    <ui:VisualElement name="Root" class="root">
+        <ui:VisualElement name="MainPanel" class="main-panel">
+            <ui:VisualElement name="InfoPanel" class="info-panel">
+                <ui:Label name="CharacterName" text="SELECT A HEAD" class="character-name" />
+                <ui:Label name="CharacterDescription" text="A new form awaits... Select a specimen to begin the adaptation process." class="character-description" style="margin-bottom: 4px;" />
+                <ui:VisualElement name="StatsContainer" class="stats-container">
+                    <ui:Label name="BaseHealthLabel" text="Base Health: --" class="stat-label" />
+                    <ui:Label name="BaseDamageLabel" text="Base Damage: --" class="stat-label" />
+                    <ui:Label name="SpeedMultiplierLabel" text="Speed Multiplier: --" class="stat-label" />
+                    <ui:VisualElement name="HealthRegenContainer" class="stat-line">
+                        <ui:Label name="HealthRegenLabel" text="Health Regen: --" class="stat-label" />
+                    </ui:VisualElement>
+                    <ui:Label name="UpgradeChoicesLabel" text="Upgrade Choices: --" class="stat-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="LabPanel" class="lab-panel">
+                <ui:VisualElement name="JarGrid" class="jar-grid" style="margin-bottom: 4px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="Footer" class="footer">
+            <ui:Button name="AdaptButton" text="ADAPT" enabled="false" class="adapt-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

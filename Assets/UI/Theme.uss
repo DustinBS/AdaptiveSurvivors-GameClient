@@ -9,6 +9,7 @@ It imports Unity's default theme and then overrides it with custom variables.
 /* --- Variable Overrides & Additions --- */
 :root {
     /* -- FONT SIZES -- */
+    --font-size-small: 8px;
     --font-size-normal: 12px;
     --font-size-large: 18px;
     --font-size-title: 32px;

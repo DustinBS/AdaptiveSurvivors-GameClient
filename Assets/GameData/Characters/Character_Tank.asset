@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1f1767655632e94888a4e21312bbe7f, type: 3}
+  m_Name: Character_Tank
+  m_EditorClassIdentifier: 
+  characterName: Guardian
+  description: 'A stalwart protector who wades into battle, shrugging off blows and
+    regenerating wounds over time.
+
+'
+  characterSprite: {fileID: -1184382605107113275, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
+  characterPortrait: {fileID: -8514666527570245238, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
+  baseHealth: 150
+  baseDamage: 15
+  speedMultiplier: 0.75
+  hasHealthRegen: 1
+  healthRegenPercent: 0.01
+  defaultUpgradeChoices: 2
+  extraUpgradeChoices: 0

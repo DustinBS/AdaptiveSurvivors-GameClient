@@ -78,7 +78,7 @@ public class DialogueManager : MonoBehaviour
         currentNpc = npc;
         currentLineIndex = -1;
 
-        uiController.UpdatePortraits(playerData.playerPortrait, npc.NPCPortrait ?? defaultPortrait);
+        uiController.UpdatePortraits(playerData.characterData.characterPortrait, npc.NPCPortrait ?? defaultPortrait);
         uiController.ShowDialogue(true);
 
         AdvanceConversation();
@@ -116,7 +116,7 @@ public class DialogueManager : MonoBehaviour
         if (line.speaker == DialogueLine.Speaker.Player)
         {
             uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.Player);
-            speakerName = playerData.playerName;
+            speakerName = playerData.characterData.characterName;
         }
         else
         {
@@ -148,7 +148,7 @@ public class DialogueManager : MonoBehaviour
         if (currentState == DialogueState.Ending || currentConversation == null) return;
 
         var currentLine = currentConversation.lines[currentLineIndex];
-        uiController.SetDialogueLine(currentLine.speaker == DialogueLine.Speaker.Player ? playerData.playerName : currentNpc.NPCName, currentLine.text);
+        uiController.SetDialogueLine(currentLine.speaker == DialogueLine.Speaker.Player ? playerData.characterData.characterName : currentNpc.NPCName, currentLine.text);
 
         ShowPlayerResponses(currentLine);
     }
@@ -158,7 +158,7 @@ public class DialogueManager : MonoBehaviour
         if (line.playerResponses != null && line.playerResponses.Count > 0)
         {
             uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.Player);
-            uiController.SetDialogueLine(playerData.playerName, "...");
+            uiController.SetDialogueLine(playerData.characterData.characterName, "...");
             currentState = DialogueState.AwaitingChoice;
             uiController.ShowContinuePrompt(false);
             uiController.DisplayChoices(line.playerResponses);

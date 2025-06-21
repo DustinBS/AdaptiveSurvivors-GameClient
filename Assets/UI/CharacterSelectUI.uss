@@ -1,0 +1,131 @@
+/* GameClient/Assets/UI/CharacterSelectUI.uss */
+.root {
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-background-panel); /* Dark background */
+    /* For a texture, you would add: background-image: url('...'); */
+}
+
+.main-panel {
+    flex-grow: 1;
+    flex-direction: row;
+    height: 90%; /* Leave 10% for the footer/button */
+}
+
+/* --- Left Panel: Info --- */
+.info-panel {
+    width: 35%;
+    padding: 10px;
+    padding-top: 20px;
+    background-color: rgba(0, 0, 0, 0.2); /* Slightly darker overlay */
+    border-right-width: 2px;
+    border-color: var(--color-border-primary);
+}
+
+.character-name {
+    font-size: var(--font-size-large);
+    color: var(--color-text-accent);
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.character-description {
+    font-size: var(--font-size-small);
+    color: var(--color-text-off-white);
+    -unity-font-style: italic;
+    white-space: normal;
+    margin-bottom: 15px;
+}
+
+.stats-container {
+    margin-bottom: auto;
+}
+
+.stat-label {
+    font-size: var(--font-size-normal);
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+}
+
+/* --- Right Panel: Lab --- */
+.lab-panel {
+    flex-grow: 1;
+    padding: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.jar-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
+    width: 80%;
+    max-width: 500px;
+    height: 80%;
+    max-height: 500px;
+}
+
+/* --- Character Jar Styling (will be created by code) --- */
+.character-jar {
+    width: 33.33%;
+    height: 33.33%;
+    background-color: rgba(30, 30, 30, 0.5);
+    border-width: 3px;
+    border-color: var(--color-border-secondary);
+    border-radius: 12px;
+    margin: 5px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    align-items: center;
+    justify-content: center;
+}
+
+.character-jar:hover {
+    background-color: rgba(80, 80, 80, 0.7);
+    border-color: var(--color-text-off-white);
+    cursor: pointer;
+}
+
+/* This class will be added via code to the selected jar */
+.character-jar--selected {
+    border-color: var(--color-text-accent);
+    background-color: rgba(100, 90, 70, 0.6);
+    scale: 1.05 1.05;
+}
+
+.character-portrait-image {
+    width: 90%;
+    height: 90%;
+    -unity-scale-mode: scale-to-fit;
+}
+
+
+/* --- Footer & Adapt Button --- */
+.footer {
+    height: 10%;
+    justify-content: center;
+    align-items: center;
+}
+
+.adapt-button {
+    font-size: var(--font-size-title);
+    -unity-font-style: bold;
+    color: var(--color-text-primary);
+    background-color: var(--color-button-background);
+    border-color: var(--color-border-secondary);
+    border-width: 2px;
+    border-radius: 10px;
+    padding: 10px 60px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.adapt-button:hover {
+    background-color: var(--color-button-background-hover);
+    border-color: var(--color-text-accent);
+}
+
+.adapt-button:disabled {
+    background-color: rgba(30, 30, 30, 0.8);
+    color: var(--color-border-primary);
+    border-color: var(--color-border-primary);
+}
