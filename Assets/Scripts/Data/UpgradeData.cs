@@ -57,4 +57,8 @@ public class UpgradeData : ScriptableObject
 
     [Tooltip("Is the 'value' a percentage modifier? If true, 0.1 = +10%. If false, it's a flat addition.")]
     public bool isPercentage;
+
+    [Header("Behavior")]
+    [Tooltip("Can this upgrade be offered multiple times after it has been chosen once? (e.g., for generic stat boosts like '+10 Health').")]
+    public bool isRepeatable = true;
 }

@@ -224,7 +224,7 @@ public class KafkaClient : MonoBehaviour
         if (consumeCancellationTokenSource != null)
         {
             consumeCancellationTokenSource.Cancel();
-            Debug.Log("Signaled Kafka Consumer thread to stop.");
+            // Debug.Log("Signaled Kafka Consumer thread to stop.");
         }
 
         if (consumerThread != null && consumerThread.IsAlive)
@@ -249,7 +249,7 @@ public class KafkaClient : MonoBehaviour
         {
             Debug.Log("Waiting 10s for Kafka Producer to flush...");
             producer.Flush(TimeSpan.FromSeconds(10)); // Wait for messages to be sent.
-            Debug.Log("Kafka Producer flushed.");
+            // Debug.Log("Kafka Producer flushed.");
             producer.Dispose();
             producer = null;
         }

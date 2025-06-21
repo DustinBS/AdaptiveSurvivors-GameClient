@@ -96,8 +96,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentLevel: 1
   currentXP: 0
-  xpToNextLevel: 100
-  upgradePool:
+  xpToNextLevel: 10
+  masterUpgradePool:
   - {fileID: 11400000, guid: abaee8c97d494194288e05530c7576ee, type: 2}
   - {fileID: 11400000, guid: 94d2c0436fb7f2543afba3795918f62e, type: 2}
 --- !u!114 &327033210970118578

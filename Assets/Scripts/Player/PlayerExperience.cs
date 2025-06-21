@@ -18,11 +18,14 @@ public class PlayerExperience : MonoBehaviour
     [Header("Experience Settings")]
     public int currentLevel = 1;
     public float currentXP = 0f;
-    public float xpToNextLevel = 2f;
+    public float xpToNextLevel = 10f;
 
     [Header("Upgrade System")]
     [Tooltip("The list of all possible UpgradeData assets that can be offered to the player.")]
-    public List<UpgradeData> upgradePool;
+    public List<UpgradeData> masterUpgradePool;
+    // --- Private State ---
+    // This list tracks the unique, non-repeatable upgrades the player has already acquired this run.
+    private List<UpgradeData> _acquiredUniqueUpgrades = new List<UpgradeData>();
 
     private KafkaClient kafkaClient;
     private PlayerStatus playerStatus;
@@ -88,7 +91,7 @@ public class PlayerExperience : MonoBehaviour
     {
         currentXP -= xpToNextLevel;
         currentLevel++;
-        xpToNextLevel = 100f + (currentLevel - 1) * 50f; // Simple scaling formula
+        xpToNextLevel = xpToNextLevel * 1.1f; // Simple scaling formula
 
         Debug.Log($"LEVEL UP! Player is now Level {currentLevel}.");
 
@@ -97,29 +100,92 @@ public class PlayerExperience : MonoBehaviour
     }
 
     /// <summary>
-    /// Selects a number of random, unique upgrades from the pool to be presented to the player.
-    /// called by the Level up UI Manager.
+    /// Selects a number of random, unique upgrades from the pool. This logic is now
+    /// robust and correctly handles repeatable upgrades as fallbacks.
     /// </summary>
-    /// <returns>A list of UpgradeData options.</returns>
     public List<UpgradeData> GetUpgradeChoices()
     {
-        if (upgradePool == null || upgradePool.Count == 0)
+        Debug.Log("--- GetUpgradeChoices: START ---");
+
+        if (masterUpgradePool == null || masterUpgradePool.Count == 0)
         {
-            Debug.LogWarning("Upgrade pool is empty. No upgrades to offer.");
+            Debug.LogWarning("Master Upgrade Pool is empty. No upgrades to offer.");
             return new List<UpgradeData>();
         }
+        Debug.Log($"[DEBUG] Master Upgrade Pool Count: {masterUpgradePool.Count}");
+        Debug.Log($"[DEBUG] Acquired Unique Upgrades Count: {_acquiredUniqueUpgrades.Count}");
+        if(_acquiredUniqueUpgrades.Count > 0)
+        {
+            Debug.Log($"[DEBUG] Acquired: {string.Join(", ", _acquiredUniqueUpgrades.Select(u => u.name))}");
+        }
 
+        // 1. Create a pool of all valid candidates for this level-up.
+        // An upgrade is a valid candidate if it's repeatable, OR if it's a unique upgrade the player has not yet acquired.
+        var candidatePool = masterUpgradePool
+            .Where(upgrade => upgrade.isRepeatable || !_acquiredUniqueUpgrades.Contains(upgrade))
+            .ToList();
+        Debug.Log($"[DEBUG] Candidate Pool Count (Repeatable + Unacquired Unique): {candidatePool.Count}");
+        if(candidatePool.Count > 0)
+        {
+            Debug.Log($"[DEBUG] Candidates: {string.Join(", ", candidatePool.Select(u => u.name))}");
+        }
+
+
+        var offeredUpgrades = new List<UpgradeData>();
         var random = new System.Random();
-        var offeredUpgrades = upgradePool.OrderBy(x => random.Next()).Take(numberOfUpgradeChoices).ToList();
+
+        if (candidatePool.Count == 0)
+        {
+            Debug.LogError("FATAL: No upgrades available in the candidate pool! Check your upgrade data asset settings.");
+            return offeredUpgrades; // Return empty list
+        }
+
+        // 2. Get a list of *distinct* candidates to prioritize unique offerings on a single panel.
+        var distinctCandidates = candidatePool.Distinct().ToList();
+        Debug.Log($"[DEBUG] Distinct Candidate Count: {distinctCandidates.Count}");
+
+
+        int choicesToMake = this.numberOfUpgradeChoices;
+        Debug.Log($"[DEBUG] Number of choices to make: {choicesToMake}");
+
+
+        for (int i = 0; i < choicesToMake; i++)
+        {
+            if (distinctCandidates.Count > 0)
+            {
+                // Prioritize picking from the distinct list first.
+                int index = random.Next(distinctCandidates.Count);
+                var choice = distinctCandidates[index];
+                offeredUpgrades.Add(choice);
+                distinctCandidates.RemoveAt(index); // Remove to avoid offering the same unique item twice on one panel.
+            }
+            else
+            {
+                // If we've run out of distinct options (e.g., we need 3 choices but only have 2 unique candidates left),
+                // we fall back to picking any item from the full candidate pool, which allows for repeatables to fill the slots.
+                Debug.LogWarning("[DEBUG] Ran out of distinct candidates. Falling back to the full candidate pool to fill remaining slots.");
+                int index = random.Next(candidatePool.Count);
+                offeredUpgrades.Add(candidatePool[index]);
+            }
+        }
+
+        Debug.Log($"[DEBUG] Final Offered Upgrades Count: {offeredUpgrades.Count}");
+        Debug.Log("--- GetUpgradeChoices: END ---");
         return offeredUpgrades;
     }
 
+
     /// <summary>
-    /// Applies the effects of the chosen upgrade and sends the relevant telemetry event.
-    /// called by the level up UI Manager after the player clicks a button.
+    /// Applies the chosen upgrade and tracks it if it's not repeatable.
     /// </summary>
     public void ApplyUpgradeAndSendEvent(UpgradeData chosenUpgrade, List<UpgradeData> offeredUpgrades)
     {
+        // If the chosen upgrade is unique, add it to our tracking list so we don't offer it again.
+        if (!chosenUpgrade.isRepeatable && !_acquiredUniqueUpgrades.Contains(chosenUpgrade))
+        {
+            _acquiredUniqueUpgrades.Add(chosenUpgrade);
+        }
+
         ApplyUpgrade(chosenUpgrade);
         SendUpgradeChoiceEvent(chosenUpgrade, offeredUpgrades);
     }
@@ -136,7 +202,7 @@ public class PlayerExperience : MonoBehaviour
                 // CORRECT: Tell PlayerStatus to handle its own max health increase.
                 playerStatus.IncreaseMaxHealth(upgrade.value);
                 break;
-            
+
             case UpgradeType.WeaponDamage:
                 // CORRECT: Tell PlayerAttack to handle its own damage increase.
                 playerAttack.IncreaseDamage(upgrade.value, upgrade.isPercentage);

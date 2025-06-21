@@ -19,3 +19,4 @@ MonoBehaviour:
   upgradeType: 5
   value: 0.15
   isPercentage: 1
+  isRepeatable: 1
