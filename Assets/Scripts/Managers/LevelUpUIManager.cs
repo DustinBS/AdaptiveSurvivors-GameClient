@@ -1,47 +1,34 @@
 // GameClient/Assets/Scripts/Managers/LevelUpUIManager.cs
-
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
 
-/// <summary>
-/// Manages the presentation of the level-up UI. It listens for the player's level-up
-/// event, displays upgrade choices, and communicates the player's selection back to the core game systems.
-/// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class LevelUpUIManager : MonoBehaviour
 {
     private VisualElement rootPanel;
+    private VisualElement choicesContainer;
     private PlayerExperience playerExperience;
-    private List<Button> choiceButtons = new List<Button>();
 
-    private void Awake()
+    void Awake()
     {
-        // Find the player experience component in the scene.
         playerExperience = FindAnyObjectByType<PlayerExperience>();
         if (playerExperience == null)
         {
-            Debug.LogError("LevelUpUIManager could not find a PlayerExperience component in the scene.", this);
+            Debug.LogError("LevelUpUIManager could not find a PlayerExperience component.", this);
             enabled = false;
             return;
         }
 
-        // Get UI elements from the UIDocument.
         var uiDocument = GetComponent<UIDocument>();
         rootPanel = uiDocument.rootVisualElement.Q<VisualElement>("LevelUpPanel");
+        choicesContainer = rootPanel.Q<VisualElement>("ChoicesContainer");
 
-        // Query for the buttons once and store them.
-        choiceButtons.Add(rootPanel.Q<Button>("UpgradeChoiceCard1"));
-        choiceButtons.Add(rootPanel.Q<Button>("UpgradeChoiceCard2"));
-        choiceButtons.Add(rootPanel.Q<Button>("UpgradeChoiceCard3"));
-
-        // The panel should be disabled by default.
         HidePanel();
     }
 
     private void OnEnable()
     {
-        // Subscribe to the OnLevelUp event.
         if (playerExperience != null)
         {
             playerExperience.OnLevelUp += HandleLevelUp;
@@ -50,19 +37,14 @@ public class LevelUpUIManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // Unsubscribe to prevent memory leaks.
         if (playerExperience != null)
         {
             playerExperience.OnLevelUp -= HandleLevelUp;
         }
     }
 
-    /// <summary>
-    /// The event handler called when PlayerExperience.OnLevelUp is invoked.
-    /// </summary>
     private void HandleLevelUp(int newLevel)
     {
-        // Pause the game and get the available upgrade choices.
         Time.timeScale = 0f;
 
         if (PlayerInputManager.Instance != null)
@@ -76,54 +58,61 @@ public class LevelUpUIManager : MonoBehaviour
         ShowPanel();
     }
 
-
+    /// <summary>
+    /// Dynamically creates and populates the upgrade choice cards based on the provided data.
+    /// </summary>
     private void PopulateUpgradeChoices(List<UpgradeData> choices)
     {
-        for (int i = 0; i < choiceButtons.Count; i++)
+        // Clear any cards from the previous level-up
+        choicesContainer.Clear();
+
+        foreach (var upgradeData in choices)
         {
-            var button = choiceButtons[i];
-            if (i < choices.Count)
-            {
-                var upgradeData = choices[i];
+            // 1. Create the card Button element
+            var cardButton = new Button();
+            cardButton.AddToClassList("upgrade-choice-card");
+            cardButton.userData = choices; // Store all choices for the event later
+            cardButton.RegisterCallback<ClickEvent, UpgradeData>(OnUpgradeChosen, upgradeData);
 
-                // Populate the UI elements with data from the ScriptableObject.
-                button.visible = true;
-                button.Q<Label>("UpgradeTitle").text = upgradeData.title;
-                button.Q<Label>("UpgradeDescription").text = upgradeData.description;
-                button.Q<VisualElement>("Icon").style.backgroundImage = new StyleBackground(upgradeData.icon);
+            // 2. Create the card's internal structure
+            // Header
+            var cardHeader = new VisualElement();
+            cardHeader.AddToClassList("card-header");
 
-                // Register a one-time callback for the button click.
-                button.RegisterCallback<ClickEvent, UpgradeData>(OnUpgradeChosen, upgradeData);
-                // Store the full list of choices in user data to pass to the event.
-                button.userData = choices;
-            }
-            else
-            {
-                // Hide any unused button slots.
-                button.visible = false;
-            }
+            // Icon
+            var icon = new VisualElement();
+            icon.AddToClassList("upgrade-icon");
+            icon.style.backgroundImage = new StyleBackground(upgradeData.icon);
+
+            // Title
+            var titleLabel = new Label(upgradeData.title);
+            titleLabel.AddToClassList("upgrade-title-label");
+
+            // Description
+            var descriptionLabel = new Label(upgradeData.description);
+            descriptionLabel.AddToClassList("upgrade-description-label");
+
+            // 3. Assemble the card
+            cardHeader.Add(icon);
+            cardHeader.Add(titleLabel);
+
+            cardButton.Add(cardHeader);
+            cardButton.Add(descriptionLabel);
+
+            // 4. Add the finished card to the main container
+            choicesContainer.Add(cardButton);
         }
     }
 
-    /// <summary>
-    /// The callback executed when an upgrade button is clicked.
-    /// </summary>
     private void OnUpgradeChosen(ClickEvent evt, UpgradeData chosenUpgrade)
     {
         var button = evt.currentTarget as Button;
         var allOfferedUpgrades = button.userData as List<UpgradeData>;
 
-        // Apply the upgrade and send the telemetry event.
         playerExperience.ApplyUpgradeAndSendEvent(chosenUpgrade, allOfferedUpgrades);
 
-        // Unregister all callbacks to prevent multiple triggers.
-        foreach (var btn in choiceButtons)
-        {
-            // We pass the same method reference used for registering to unregister.
-            btn.UnregisterCallback<ClickEvent, UpgradeData>(OnUpgradeChosen);
-        }
+        // No need to unregister callbacks since we Clear() the container each time
 
-        // Unpause the game and hide the panel.
         Time.timeScale = 1f;
         if (PlayerInputManager.Instance != null)
         {
@@ -132,13 +121,6 @@ public class LevelUpUIManager : MonoBehaviour
         HidePanel();
     }
 
-    private void ShowPanel()
-    {
-        rootPanel.style.display = DisplayStyle.Flex; //
-    }
-
-    private void HidePanel()
-    {
-        rootPanel.style.display = DisplayStyle.None; //
-    }
+    private void ShowPanel() => rootPanel.style.display = DisplayStyle.Flex;
+    private void HidePanel() => rootPanel.style.display = DisplayStyle.None;
 }

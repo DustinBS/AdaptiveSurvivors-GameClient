@@ -7,33 +7,52 @@
     align-items: center;
     justify-content: center;
     background-color: var(--color-background-overlay);
+    padding: 20px;
 }
 
 .title-label {
     font-size: var(--font-size-title);
     color: var(--color-text-accent);
-    margin-bottom: 30px;
+    margin-bottom: 40px; /* Increased margin for better spacing */
     -unity-font-style: bold;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    flex-shrink: 0; /* Prevent title from shrinking */
 }
 
-/* --- Choices Container --- */
+/* --- Choices Container (Flexbox Magic) --- */
 .choices-container {
-    flex-direction: row;
-    justify-content: center;
-    align-items: stretch;
+    flex-direction: row; /* Arrange cards in a row */
+    justify-content: center; /* Horizontally center the group of cards */
+    align-items: center; /* Vertically center the cards in the row */
+    flex-wrap: wrap; /* Allow cards to wrap to a new line on smaller/narrower screens */
+    width: 85%; /* Use a percentage of the screen, not the whole thing */
+    max-width: 1400px; /* Set a max pixel width for very large screens */
 }
 
-/* --- Upgrade Card Styling --- */
+/* --- Upgrade Card Styling (Responsive) --- */
 .upgrade-choice-card {
-    width: 220px;
-    height: 280px;
+    /* Use flex properties instead of fixed width */
+    flex-grow: 1; /* Allow cards to grow to fill space */
+    flex-shrink: 1; /* Allow cards to shrink */
+    flex-basis: 15%; /* Each card wants to be ~1/6th of the container width */
+
+    /* Set size constraints to enforce your rules */
+    min-width: 160px; /* Don't allow cards to become too small */
+    max-width: 220px; /* A max pixel width often looks better than a % */
+
+    aspect-ratio: 0.7; /* Maintain a consistent shape (taller than wide) */
+
     background-color: var(--color-background-panel);
     border-color: var(--color-border-primary);
     border-width: 2px;
     border-radius: 12px;
     padding: 15px;
-    margin: 0 15px;
+    margin: 10px; /* This creates the gap between cards */
+
+    /* These properties ensure the content inside the card is arranged properly */
+    align-items: center; /* Center the header content horizontally */
+    justify-content: flex-start; /* Align content to the top */
+
     transition-property: background-color, border-color, transform;
     transition-duration: 0.15s;
 }
@@ -51,32 +70,34 @@
 
 /* --- Card Content --- */
 .card-header {
-    flex-direction: row;
+    flex-direction: column; /* Stack icon and title vertically */
     align-items: center;
     margin-bottom: 12px;
+    width: 100%;
 }
 
 .upgrade-icon {
-    width: 50px;
-    height: 50px;
-    margin-right: 12px;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 10px; /* Space between icon and title */
     background-color: rgb(30, 30, 30);
     border-radius: 5px;
     border-width: 1px;
     border-color: var(--color-border-primary);
+    flex-shrink: 0;
 }
 
 .upgrade-title-label {
-    flex-grow: 1;
     font-size: var(--font-size-large);
     color: var(--color-text-primary);
     -unity-font-style: bold;
     white-space: normal;
+    -unity-text-align: middle-center; /* Center the title text */
 }
 
 .upgrade-description-label {
     font-size: var(--font-size-normal);
     color: var(--color-text-off-white);
     white-space: normal;
-    -unity-text-align: upper-left;
+    -unity-text-align: middle-center; /* Center the description text */
 }

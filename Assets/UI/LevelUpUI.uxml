@@ -1,36 +1,12 @@
 <!-- GameClient/Assets/UI/LevelUpUI.uxml -->
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
-    <Style src="/Assets/UI/LevelUpUI.uss" />
+    <ui:Style src="/Assets/UI/LevelUpUI.uss" />
+
     <ui:VisualElement name="LevelUpPanel" class="level-up-panel">
 
         <ui:Label text="CHOOSE YOUR UPGRADE" name="Title" class="title-label" />
 
-        <ui:VisualElement name="ChoicesContainer" class="choices-container">
+        <ui:VisualElement name="ChoicesContainer" class="choices-container" />
 
-            <ui:Button name="UpgradeChoiceCard1" class="upgrade-choice-card">
-                <ui:VisualElement name="CardHeader" class="card-header">
-                    <ui:VisualElement name="Icon" class="upgrade-icon" />
-                    <ui:Label name="UpgradeTitle" text="Upgrade Title 1" class="upgrade-title-label" />
-                </ui:VisualElement>
-                <ui:Label name="UpgradeDescription" text="This is the description of the first upgrade choice. It explains what the upgrade does." class="upgrade-description-label" />
-            </ui:Button>
-
-            <ui:Button name="UpgradeChoiceCard2" class="upgrade-choice-card">
-                <ui:VisualElement name="CardHeader" class="card-header">
-                    <ui:VisualElement name="Icon" class="upgrade-icon" />
-                    <ui:Label name="UpgradeTitle" text="Upgrade Title 2" class="upgrade-title-label" />
-                </ui:VisualElement>
-                <ui:Label name="UpgradeDescription" text="This is the description of the second upgrade choice. It provides details on its effects." class="upgrade-description-label" />
-            </ui:Button>
-
-            <ui:Button name="UpgradeChoiceCard3" class="upgrade-choice-card">
-                <ui:VisualElement name="CardHeader" class="card-header">
-                    <ui:VisualElement name="Icon" class="upgrade-icon" />
-                    <ui:Label name="UpgradeTitle" text="Upgrade Title 3" class="upgrade-title-label" />
-                </ui:VisualElement>
-                <ui:Label name="UpgradeDescription" text="This is the description of the third upgrade choice. Players will read this to make their decision." class="upgrade-description-label" />
-            </ui:Button>
-
-        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
