@@ -1,4 +1,8 @@
 /* GameClient/Assets/UI/LevelUpUI.uss */
+
+@import url("Theme.uss");
+
+
 /* --- Main Panel --- */
 .level-up-panel {
     width: 100%;
@@ -13,64 +17,60 @@
 .title-label {
     font-size: var(--font-size-title);
     color: var(--color-text-accent);
-    margin-bottom: 40px; /* Increased margin for better spacing */
     -unity-font-style: bold;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-    flex-shrink: 0; /* Prevent title from shrinking */
+    flex-shrink: 0;
 }
 
-/* --- Choices Container (Flexbox Magic) --- */
+/* --- Choices Container --- */
 .choices-container {
-    flex-direction: row; /* Arrange cards in a row */
-    justify-content: center; /* Horizontally center the group of cards */
-    align-items: center; /* Vertically center the cards in the row */
-    flex-wrap: wrap; /* Allow cards to wrap to a new line on smaller/narrower screens */
-    width: 85%; /* Use a percentage of the screen, not the whole thing */
-    max-width: 1400px; /* Set a max pixel width for very large screens */
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 85%;
+    max-width: 1400px;
 }
 
-/* --- Upgrade Card Styling (Responsive) --- */
+/* --- Upgrade Card Styling --- */
 .upgrade-choice-card {
-    /* Use flex properties instead of fixed width */
-    flex-grow: 1; /* Allow cards to grow to fill space */
-    flex-shrink: 1; /* Allow cards to shrink */
-    flex-basis: 15%; /* Each card wants to be ~1/6th of the container width */
-
-    /* Set size constraints to enforce your rules */
-    min-width: 160px; /* Don't allow cards to become too small */
-    max-width: 220px; /* A max pixel width often looks better than a % */
-
-    aspect-ratio: 0.7; /* Maintain a consistent shape (taller than wide) */
-
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 15%;
+    min-width: 160px;
+    max-width: 220px;
+    height: 220px;
     background-color: var(--color-background-panel);
     border-color: var(--color-border-primary);
     border-width: 2px;
     border-radius: 12px;
     padding: 15px;
-    margin: 10px; /* This creates the gap between cards */
-
-    /* These properties ensure the content inside the card is arranged properly */
-    align-items: center; /* Center the header content horizontally */
-    justify-content: flex-start; /* Align content to the top */
-
-    transition-property: background-color, border-color, transform;
+    margin: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    
+    /* MODIFIED: The 'transform' property has been removed from the transition
+       as it was the source of the rendering engine error. */
+    transition-property: background-color, border-color;
     transition-duration: 0.15s;
 }
 
+/* --- HOVER/ACTIVE STATES (MODIFIED) --- */
+/* The problematic 'transform' property has been removed. */
 .upgrade-choice-card:hover {
     background-color: var(--color-button-background-hover);
     border-color: var(--color-border-secondary);
-    transform: scale(1.05);
 }
 
 .upgrade-choice-card:active {
+    /* We can use a slightly different color for the active state for feedback. */
     background-color: var(--color-button-background-active);
-    transform: scale(1.02);
 }
+
 
 /* --- Card Content --- */
 .card-header {
-    flex-direction: column; /* Stack icon and title vertically */
+    flex-direction: column;
     align-items: center;
     margin-bottom: 12px;
     width: 100%;
@@ -79,7 +79,7 @@
 .upgrade-icon {
     width: 60px;
     height: 60px;
-    margin-bottom: 10px; /* Space between icon and title */
+    margin-bottom: 10px;
     background-color: rgb(30, 30, 30);
     border-radius: 5px;
     border-width: 1px;
@@ -88,16 +88,16 @@
 }
 
 .upgrade-title-label {
-    font-size: var(--font-size-large);
+    font-size: var(--font-size-normal);
     color: var(--color-text-primary);
     -unity-font-style: bold;
     white-space: normal;
-    -unity-text-align: middle-center; /* Center the title text */
+    -unity-text-align: middle-center;
 }
 
 .upgrade-description-label {
-    font-size: var(--font-size-normal);
+    font-size: var(--font-size-small);
     color: var(--color-text-off-white);
     white-space: normal;
-    -unity-text-align: middle-center; /* Center the description text */
+    -unity-text-align: upper-left;
 }

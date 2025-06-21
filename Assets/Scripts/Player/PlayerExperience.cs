@@ -105,31 +105,16 @@ public class PlayerExperience : MonoBehaviour
     /// </summary>
     public List<UpgradeData> GetUpgradeChoices()
     {
-        Debug.Log("--- GetUpgradeChoices: START ---");
-
         if (masterUpgradePool == null || masterUpgradePool.Count == 0)
         {
             Debug.LogWarning("Master Upgrade Pool is empty. No upgrades to offer.");
             return new List<UpgradeData>();
         }
-        Debug.Log($"[DEBUG] Master Upgrade Pool Count: {masterUpgradePool.Count}");
-        Debug.Log($"[DEBUG] Acquired Unique Upgrades Count: {_acquiredUniqueUpgrades.Count}");
-        if(_acquiredUniqueUpgrades.Count > 0)
-        {
-            Debug.Log($"[DEBUG] Acquired: {string.Join(", ", _acquiredUniqueUpgrades.Select(u => u.name))}");
-        }
-
         // 1. Create a pool of all valid candidates for this level-up.
         // An upgrade is a valid candidate if it's repeatable, OR if it's a unique upgrade the player has not yet acquired.
         var candidatePool = masterUpgradePool
             .Where(upgrade => upgrade.isRepeatable || !_acquiredUniqueUpgrades.Contains(upgrade))
             .ToList();
-        Debug.Log($"[DEBUG] Candidate Pool Count (Repeatable + Unacquired Unique): {candidatePool.Count}");
-        if(candidatePool.Count > 0)
-        {
-            Debug.Log($"[DEBUG] Candidates: {string.Join(", ", candidatePool.Select(u => u.name))}");
-        }
-
 
         var offeredUpgrades = new List<UpgradeData>();
         var random = new System.Random();
@@ -142,12 +127,7 @@ public class PlayerExperience : MonoBehaviour
 
         // 2. Get a list of *distinct* candidates to prioritize unique offerings on a single panel.
         var distinctCandidates = candidatePool.Distinct().ToList();
-        Debug.Log($"[DEBUG] Distinct Candidate Count: {distinctCandidates.Count}");
-
-
         int choicesToMake = this.numberOfUpgradeChoices;
-        Debug.Log($"[DEBUG] Number of choices to make: {choicesToMake}");
-
 
         for (int i = 0; i < choicesToMake; i++)
         {
@@ -168,9 +148,6 @@ public class PlayerExperience : MonoBehaviour
                 offeredUpgrades.Add(candidatePool[index]);
             }
         }
-
-        Debug.Log($"[DEBUG] Final Offered Upgrades Count: {offeredUpgrades.Count}");
-        Debug.Log("--- GetUpgradeChoices: END ---");
         return offeredUpgrades;
     }
 

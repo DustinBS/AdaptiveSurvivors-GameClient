@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
-  defaultCharacterData: {fileID: 11400000, guid: df28ff5500d78f745a8b6957c05841d5, type: 2}
+  defaultCharacterData: {fileID: 11400000, guid: dc4e1d90e4c77064fae38fa4467d71ed, type: 2}
   defaultWeaponData: {fileID: 11400000, guid: fd520dea82754184aa9179d935b44533, type: 2}
 --- !u!114 &6930875909552282488
 MonoBehaviour:
