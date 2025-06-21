@@ -121,7 +121,6 @@ public class DialogueUIController : MonoBehaviour
         {
             var button = new Button(() =>
             {
-                Debug.Log($"[Step 1] Choice button '{choice.responseText}' was physically clicked.");
                 OnChoiceSelected?.Invoke(choice);
             })
             {

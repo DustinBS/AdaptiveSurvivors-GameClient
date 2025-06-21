@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/UI/CharacterSelectUI.uss?fileID=7433441132597879392&amp;guid=987e0a11beb19bd45a548b08585d5813&amp;type=3#CharacterSelectUI" />
+    <Style src="/Assets/UI/CharacterSelectUI.uss" />
     <ui:VisualElement name="Root" class="root">
         <ui:VisualElement name="MainPanel" class="main-panel">
             <ui:VisualElement name="InfoPanel" class="info-panel">

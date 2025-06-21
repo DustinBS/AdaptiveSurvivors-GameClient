@@ -12,41 +12,35 @@ using System.Linq;
 /// </summary>
 public class PlayerExperience : MonoBehaviour
 {
+    private string playerId;
+    private int numberOfUpgradeChoices;
+
     [Header("Experience Settings")]
-    [Tooltip("The unique ID of the player.")]
-    public string playerId = "player_001";
-
-    [Tooltip("The current level of the player.")]
     public int currentLevel = 1;
-
-    [Tooltip("The current experience points of the player.")]
     public float currentXP = 0f;
-
-    [Tooltip("The amount of XP required for the next level.")]
-    public float xpToNextLevel = 100f;
+    public float xpToNextLevel = 2f;
 
     [Header("Upgrade System")]
     [Tooltip("The list of all possible UpgradeData assets that can be offered to the player.")]
     public List<UpgradeData> upgradePool;
 
-    [Tooltip("Number of upgrade options presented to the player at each level-up.")]
-    [Range(1, 5)]
-    public int numberOfUpgradeChoices = 3;
-
-    // References to other components on the Player GameObject
     private KafkaClient kafkaClient;
     private PlayerStatus playerStatus;
     private PlayerAttack playerAttack;
     private PlayerMovement playerMovement;
 
-    // Events for UI updates
     public event Action<int> OnLevelUp;
     public event Action<float, float> OnXPChanged;
 
+    // The Initialize method, called by PlayerInitializer
+    public void Initialize(CharacterData data)
+    {
+        this.playerId = data.characterName;
+        this.numberOfUpgradeChoices = data.defaultUpgradeChoices + data.extraUpgradeChoices;
+    }
+
     void Awake()
     {
-        // Cache references to all necessary components
-        // Using FindAnyObjectByType as it's faster if any instance is acceptable.
         kafkaClient = FindAnyObjectByType<KafkaClient>();
         playerStatus = GetComponent<PlayerStatus>();
         playerAttack = GetComponent<PlayerAttack>();
@@ -54,7 +48,7 @@ public class PlayerExperience : MonoBehaviour
 
         if (kafkaClient == null || playerStatus == null || playerAttack == null || playerMovement == null)
         {
-            Debug.LogError("PlayerExperience: Missing one or more required components (KafkaClient, PlayerStatus, PlayerAttack, PlayerMovement).", this);
+            Debug.LogError("PlayerExperience: Missing one or more required components.", this);
             enabled = false;
         }
     }
@@ -100,69 +94,66 @@ public class PlayerExperience : MonoBehaviour
 
         OnLevelUp?.Invoke(currentLevel);
         OnXPChanged?.Invoke(currentXP, xpToNextLevel);
-
-        PresentUpgradeChoices();
     }
 
     /// <summary>
-    /// Selects random, unique upgrades from the pool and applies the player's choice.
+    /// Selects a number of random, unique upgrades from the pool to be presented to the player.
+    /// called by the Level up UI Manager.
     /// </summary>
-    private void PresentUpgradeChoices()
+    /// <returns>A list of UpgradeData options.</returns>
+    public List<UpgradeData> GetUpgradeChoices()
     {
         if (upgradePool == null || upgradePool.Count == 0)
         {
             Debug.LogWarning("Upgrade pool is empty. No upgrades to offer.");
-            return;
+            return new List<UpgradeData>();
         }
 
         var random = new System.Random();
         var offeredUpgrades = upgradePool.OrderBy(x => random.Next()).Take(numberOfUpgradeChoices).ToList();
+        return offeredUpgrades;
+    }
 
-        if (offeredUpgrades.Count > 0)
-        {
-            // In a real implementation, you would trigger a UI panel here.
-            Debug.Log("Choose your upgrade:");
-            foreach (var upgrade in offeredUpgrades)
-            {
-                Debug.Log($"- {upgrade.title}: {upgrade.description}");
-            }
-
-            // --- Player Choice Simulation ---
-            UpgradeData chosenUpgrade = offeredUpgrades[0];
-            Debug.Log($"Player chose: {chosenUpgrade.title}");
-
-            ApplyUpgrade(chosenUpgrade);
-            SendUpgradeChoiceEvent(chosenUpgrade, offeredUpgrades);
-        }
+    /// <summary>
+    /// Applies the effects of the chosen upgrade and sends the relevant telemetry event.
+    /// called by the level up UI Manager after the player clicks a button.
+    /// </summary>
+    public void ApplyUpgradeAndSendEvent(UpgradeData chosenUpgrade, List<UpgradeData> offeredUpgrades)
+    {
+        ApplyUpgrade(chosenUpgrade);
+        SendUpgradeChoiceEvent(chosenUpgrade, offeredUpgrades);
     }
 
     /// <summary>
     /// Applies the effects of the chosen upgrade to the relevant player components.
+    /// This logic is now clean and calls authoritative methods on other components.
     /// </summary>
     private void ApplyUpgrade(UpgradeData upgrade)
     {
         switch (upgrade.upgradeType)
         {
             case UpgradeType.MaxHealth:
-                playerStatus.maxHealth += upgrade.value;
-                playerStatus.Heal(upgrade.value); // Also heal for the increased amount
+                // CORRECT: Tell PlayerStatus to handle its own max health increase.
+                playerStatus.IncreaseMaxHealth(upgrade.value);
                 break;
-            case UpgradeType.MoveSpeed:
-                playerMovement.moveSpeed *= (1 + upgrade.value);
-                break;
+            
             case UpgradeType.WeaponDamage:
-                // Note: Modifying ScriptableObject at runtime is possible but affects all instances.
-                // A better approach for stats is to have local variables in PlayerAttack that are initialized
-                // from the SO and then modified. For simplicity now, we modify the SO instance directly.
-                playerAttack.currentWeapon.baseDamage *= (1 + upgrade.value);
-                playerAttack.InitializeWeaponStats(); // Re-initialize to apply changes
+                // CORRECT: Tell PlayerAttack to handle its own damage increase.
+                playerAttack.IncreaseDamage(upgrade.value, upgrade.isPercentage);
                 break;
-            case UpgradeType.AttackSpeed:
-                playerAttack.currentWeapon.attackInterval *= (1 - upgrade.value);
-                playerAttack.InitializeWeaponStats(); // Re-initialize to apply changes
+
+            case UpgradeType.MoveSpeed:
+                // CORRECT: Tell PlayerMovement to handle its own speed increase.
+                playerMovement.IncreaseMoveSpeed(upgrade.value, upgrade.isPercentage);
                 break;
+
+            // Add other cases like AttackSpeed, etc. following the same pattern.
+            // case UpgradeType.AttackSpeed:
+            //     playerAttack.IncreaseAttackSpeed(upgrade.value, upgrade.isPercentage);
+            //     break;
+
             default:
-                Debug.LogWarning($"Upgrade type '{upgrade.upgradeType}' not implemented yet.");
+                Debug.LogWarning($"Upgrade type '{upgrade.upgradeType}' not implemented in PlayerExperience.cs");
                 break;
         }
     }
@@ -179,7 +170,7 @@ public class PlayerExperience : MonoBehaviour
             { "chosen_upgrade_id", chosenUpgrade.upgradeID },
             { "rejected_ids", rejectedIds }
         };
-        kafkaClient.SendGameplayEvent("upgrade_choice_event", playerId, payload);
+        kafkaClient.SendGameplayEvent("upgrade_choice", playerId, payload);
     }
 
     /// <summary>

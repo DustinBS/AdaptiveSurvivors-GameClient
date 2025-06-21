@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/UI/DialogueUI.uss?fileID=7433441132597879392&amp;guid=8f01dd4ca690c3c4c8df335e458fd0fe&amp;type=3#DialogueUI" />
+    <Style src="/Assets/UI/DialogueUI.uss" />
     <ui:VisualElement name="DialogueRoot" class="dialogue-root">
         <ui:VisualElement name="TopBar" class="letterbox-bar top-bar" />
         <ui:VisualElement name="BottomBar" class="letterbox-bar bottom-bar" />

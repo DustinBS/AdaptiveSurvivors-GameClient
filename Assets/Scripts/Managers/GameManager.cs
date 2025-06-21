@@ -89,7 +89,7 @@ public class GameManager : MonoBehaviour
     private IEnumerator ShowDeathMenuAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        UIManager.Instance.ShowDeathMenu();
+        UGUIManager.Instance.ShowDeathMenu();
     }
 
     private void AdvanceWave()

@@ -1,4 +1,4 @@
-// GameClient/Assets/Scripts/Managers/UIManager.cs
+// GameClient/Assets/Scripts/Managers/UGUIManager.cs
 
 using UnityEngine;
 using System.Collections;
@@ -8,10 +8,10 @@ using System.Collections;
 /// It is responsible for showing, hiding, and animating UI elements like the death menu,
 /// pause menu, dialogue windows, etc.
 /// </summary>
-public class UIManager : MonoBehaviour
+public class UGUIManager : MonoBehaviour
 {
     // --- Singleton Instance ---
-    public static UIManager Instance { get; private set; }
+    public static UGUIManager Instance { get; private set; }
 
     [Header("UI Panel References")]
     [Tooltip("The parent GameObject for the Death Menu UI panel.")]

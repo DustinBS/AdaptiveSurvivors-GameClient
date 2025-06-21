@@ -35,6 +35,9 @@ public class CharacterData : ScriptableObject
     [Range(0.5f, 2.0f)]
     public float speedMultiplier = 1.0f;
 
+    [Tooltip("The weapon this character starts the run with.")]
+    public WeaponData startingWeapon;
+
     [Header("Unique Mechanics")]
     [Tooltip("Does this character have innate health regeneration?")]
     public bool hasHealthRegen = false;

@@ -20,6 +20,7 @@ MonoBehaviour:
   baseHealth: 70
   baseDamage: 7
   speedMultiplier: 2
+  startingWeapon: {fileID: 11400000, guid: fd520dea82754184aa9179d935b44533, type: 2}
   hasHealthRegen: 0
   healthRegenPercent: 1
   defaultUpgradeChoices: 2

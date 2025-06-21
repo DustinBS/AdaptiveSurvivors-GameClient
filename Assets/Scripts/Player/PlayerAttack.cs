@@ -9,44 +9,40 @@ using System.Collections.Generic;
 /// </summary>
 public class PlayerAttack : MonoBehaviour
 {
-    [Header("Weapon Configuration")]
-    [Tooltip("The ScriptableObject that defines the properties of the currently equipped weapon.")]
-    public WeaponData currentWeapon;
+    private string playerId;
+    public WeaponData currentWeapon { get; private set; }
 
-    [Header("Dependencies")]
-    [Tooltip("Unique identifier for the player. Should match other player scripts.")]
-    public string playerId = "player_001";
-
-    // Private fields to hold runtime stats derived from WeaponData
     private float attackInterval;
     private float attackRange;
     private float baseDamage;
     private float attackTimer;
+    private float currentDamage;
 
-    // Reference to the KafkaClient instance in the scene
     private KafkaClient kafkaClient;
 
-    void Awake()
+    // The Initialize method, called by PlayerInitializer
+    public void Initialize(CharacterData data)
     {
-        kafkaClient = FindObjectOfType<KafkaClient>();
-        if (kafkaClient == null)
-        {
-            Debug.LogError("PlayerAttack: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
-            enabled = false;
-            return; // Stop execution if KafkaClient is missing
-        }
+        this.playerId = data.characterName;
+        this.currentWeapon = data.startingWeapon;
+        this.currentDamage = data.baseDamage; // Initialize from character
 
-        // Initialize attack properties from the ScriptableObject
-        if (currentWeapon != null)
+        if (this.currentWeapon != null)
         {
             InitializeWeaponStats();
         }
         else
         {
-            Debug.LogError("PlayerAttack: No WeaponData assigned. Please assign a WeaponData asset in the Inspector.", this);
+            Debug.LogError("PlayerAttack: CharacterData has no Starting Weapon assigned!", this);
             enabled = false;
         }
     }
+
+    void Awake()
+    {
+        kafkaClient = FindObjectOfType<KafkaClient>();
+    }
+
 
     /// <summary>
     /// Sets the component's internal stats from the assigned WeaponData asset.
@@ -54,10 +50,11 @@ public class PlayerAttack : MonoBehaviour
     /// </summary>
     public void InitializeWeaponStats()
     {
+        // character's base damage as the foundation, and the weapon's stats for everything else.
         attackInterval = currentWeapon.attackInterval;
         attackRange = currentWeapon.attackRange;
-        baseDamage = currentWeapon.baseDamage;
-        attackTimer = attackInterval; // Set timer to attack immediately on start
+        // The baseDamage field in this script is now initialized from CharacterData
+        attackTimer = attackInterval;
     }
 
     void Update()
@@ -72,7 +69,22 @@ public class PlayerAttack : MonoBehaviour
     }
 
     /// <summary>
-    /// Performs the auto-attack: finds target, deals damage, and sends Kafka event.
+    /// Increases the player's damage by a flat amount or a percentage.
+    /// </summary>
+    public void IncreaseDamage(float value, bool isPercentage)
+    {
+        if (isPercentage)
+        {
+            currentDamage *= (1 + value); // 0.1 = +10%
+        }
+        else
+        {
+            currentDamage += value; // Flat increase
+        }
+    }
+
+    /// <summary>
+    /// Performs the auto-attack: finds target, deals damage, and sends a Kafka event.
     /// </summary>
     private void PerformAttack()
     {
@@ -83,12 +95,11 @@ public class PlayerAttack : MonoBehaviour
             EnemyHealth enemyHealth = nearestEnemy.GetComponent<EnemyHealth>();
             if (enemyHealth != null)
             {
-                // For now, damage is simple. This could be expanded with critical hits, etc.
-                float actualDamageDealt = baseDamage;
-                enemyHealth.TakeDamage(actualDamageDealt, currentWeapon.weaponID);
+                // Use the component's currentDamage, which was set from CharacterData and can be upgraded.
+                enemyHealth.TakeDamage(this.currentDamage, currentWeapon.weaponID);
 
                 // Send the event to Kafka
-                SendWeaponHitEvent(actualDamageDealt, enemyHealth.EnemyId);
+                SendWeaponHitEvent(this.currentDamage, enemyHealth.EnemyId);
             }
         }
     }
@@ -103,8 +114,7 @@ public class PlayerAttack : MonoBehaviour
         if (enemies.Length == 0) return null;
 
         GameObject nearest = null;
-        float minDistanceSqr = attackRange * attackRange; // Use squared distance for efficiency
-
+        float minDistanceSqr = attackRange * attackRange;
         foreach (GameObject enemy in enemies)
         {
             float distanceSqr = (enemy.transform.position - transform.position).sqrMagnitude;
@@ -132,8 +142,6 @@ public class PlayerAttack : MonoBehaviour
         };
         kafkaClient.SendGameplayEvent("weapon_hit_event", playerId, payload);
     }
-
-    // Optional: Draw attack range in editor for visualization
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;

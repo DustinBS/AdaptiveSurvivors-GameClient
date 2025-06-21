@@ -74,7 +74,6 @@ public class DialogueManager : MonoBehaviour
         // 2. Immediately subscribe to the necessary events.
         if (playerControls != null)
         {
-            Debug.Log("DialogueManager: Registering input action for Submit in Start().");
             playerControls.UI.Submit.performed += OnSubmitPerformed;
         }
         else
@@ -109,12 +108,6 @@ public class DialogueManager : MonoBehaviour
         {
             // If we found one, subscribe to its event.
             uiController.OnChoiceSelected += OnPlayerResponseClicked;
-            Debug.Log("DialogueManager successfully found and connected to DialogueUIController in scene: " + scene.name);
-        }
-        else
-        {
-            // If the new scene has no dialogue UI, we just log it for debugging.
-            Debug.Log("No DialogueUIController found in scene: " + scene.name);
         }
     }
 
@@ -236,13 +229,10 @@ public class DialogueManager : MonoBehaviour
 
     private void OnPlayerResponseClicked(PlayerResponse response)
     {
-        Debug.Log($"[Step 2] DialogueManager received event for response: '{response.responseText}'");
         if (currentState != DialogueState.AwaitingChoice || uiController == null)
         {
-            Debug.LogWarning($"[Step 3] Guard clause triggered. Current state: {currentState}. Aborting response.");
             return;
         }
-        Debug.Log($"[Step 4] State is correct ({currentState}). Proceeding with response.");
 
         uiController.HideChoices();
         if (response.nextDialogue != null)

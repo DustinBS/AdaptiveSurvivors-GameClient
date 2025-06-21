@@ -8,49 +8,35 @@ using System.Collections.Generic; // For Dictionary
 // It assumes the player has a Rigidbody2D component for physics-based movement.
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    [Tooltip("The movement speed of the player.")]
-    public float moveSpeed = 5f;
+    private float moveSpeed;
+    private string playerId;
+    private const float BASE_MOVE_SPEED = 5f; // Keep a base speed constant
 
-    // Reference to the KafkaClient instance in the scene
     private KafkaClient kafkaClient;
-
-    [Tooltip("Unique identifier for this player.")]
-    public string playerId = "player_001"; 
-
     private Rigidbody2D rb;
-
-    // --- New Input System Variables ---
     private PlayerControls playerControls;
     private Vector2 currentMovementInput;
-
-    // Last sent position for debouncing Kafka events
     private Vector2 lastSentPosition;
     private Vector2 lastSentDirection;
-    [Tooltip("Minimum distance change before sending a new movement event to Kafka.")]
-    public float positionEventThreshold = 0.1f;
-    [Tooltip("Minimum direction change (dot product difference) before sending a new movement event to Kafka.")]
-    public float directionEventThreshold = 0.05f; 
+
+    [Header("Kafka Settings")]
+    [Tooltip("Minimum distance change before sending a new movement event.")]
+    [SerializeField] private float positionEventThreshold = 0.1f;
+    [Tooltip("Minimum direction change before sending a new movement event.")]
+    [SerializeField] private float directionEventThreshold = 0.05f;
+
+    // The Initialize method, called by PlayerInitializer
+    public void Initialize(CharacterData data)
+    {
+        this.playerId = data.characterName;
+        this.moveSpeed = BASE_MOVE_SPEED * data.speedMultiplier;
+    }
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        if (rb == null)
-        {
-            Debug.LogError("PlayerMovement: Rigidbody2D component not found on this GameObject. Please add one.", this);
-            enabled = false;
-        }
-
         kafkaClient = FindAnyObjectByType<KafkaClient>();
-        if (kafkaClient == null)
-        {
-            Debug.LogError("PlayerMovement: KafkaClient not found in the scene. Please add a GameObject with KafkaClient.cs.", this);
-            enabled = false;
-        }
-
-        // --- Get PlayerControls from the central manager ---
         playerControls = PlayerInputManager.Instance.PlayerControls;
-
         lastSentPosition = transform.position;
         lastSentDirection = Vector2.zero;
     }
@@ -67,6 +53,21 @@ public class PlayerMovement : MonoBehaviour
         // Unsubscribe to prevent memory leaks
         playerControls.Player.Move.performed -= OnMovePerformed;
         playerControls.Player.Move.canceled -= OnMoveCanceled;
+    }
+
+    /// <summary>
+    /// Increases the player's movement speed by a flat amount or percentage.
+    /// </summary>
+    public void IncreaseMoveSpeed(float value, bool isPercentage)
+    {
+        if (isPercentage)
+        {
+            moveSpeed *= (1 + value);
+        }
+        else
+        {
+            moveSpeed += value;
+        }
     }
 
     private void OnMovePerformed(InputAction.CallbackContext context)

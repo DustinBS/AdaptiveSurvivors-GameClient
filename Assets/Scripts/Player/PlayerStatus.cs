@@ -11,17 +11,17 @@ using System;
 /// </summary>
 public class PlayerStatus : MonoBehaviour
 {
-    [Header("Player Stats")]
-    public string playerId = "player_001";
-    public float maxHealth = 100f;
-    public float currentHealth;
+    private string playerId;
+    public float maxHealth { get; private set; }
+    public float currentHealth { get; private set; }
+
     public float maxMana = 50f;
     public float currentMana;
     public List<string> activeBuffs = new List<string>();
     public List<string> activeDebuffs = new List<string>();
 
     [Header("Kafka Event Settings")]
-    public float statusEventSendInterval = 1.0f;
+    [SerializeField] private float statusEventSendInterval = 1.0f;
 
     // --- Events for other systems to subscribe to ---
     /// <summary>
@@ -40,9 +40,16 @@ public class PlayerStatus : MonoBehaviour
     private float statusEventTimer;
     private bool isDead = false;
 
+    // The Initialize method, called by PlayerInitializer
+    public void Initialize(CharacterData data)
+    {
+        this.playerId = data.characterName;
+        this.maxHealth = data.baseHealth;
+        this.currentHealth = this.maxHealth; // Start with full health
+    }
+
     void Awake()
     {
-        currentHealth = maxHealth;
         currentMana = maxMana;
 
         kafkaClient = FindAnyObjectByType<KafkaClient>();
@@ -69,6 +76,24 @@ public class PlayerStatus : MonoBehaviour
             SendPlayerStatusEvent();
             statusEventTimer = statusEventSendInterval;
         }
+    }
+
+    // --- Public API for Health & Damage ---
+
+    /// <summary>
+    /// Increases the player's maximum health and heals for the same amount.
+    /// This is the definitive method for handling 'MaxHealth' upgrades.
+    /// </summary>
+    /// <param name="amount">The amount to increase max health by.</param>
+    public void IncreaseMaxHealth(float amount)
+    {
+        if (isDead || amount <= 0) return;
+
+        maxHealth += amount;
+        Heal(amount); // Also heal the player for the amount gained.
+
+        // The OnHealthChanged event is invoked by Heal(), so no need to call it twice.
+        Debug.Log($"Max Health increased by {amount}. New Max Health: {maxHealth}");
     }
 
     public void TakeDamage(float amount, string sourceEnemyId = "unknown_enemy")
