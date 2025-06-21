@@ -1,12 +1,34 @@
-<!-- GameClient/Assets/UI/LevelUpUI.uxml -->
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:engine="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:Style src="/Assets/UI/LevelUpUI.uss" />
-
+    <Style src="/Assets/UI/LevelUpUI.uss" />
     <ui:VisualElement name="LevelUpPanel" class="level-up-panel">
-
         <ui:Label text="CHOOSE YOUR UPGRADE" name="Title" class="title-label" />
-
-        <ui:VisualElement name="ChoicesContainer" class="choices-container" />
-
+        <ui:VisualElement name="ChoicesContainer" class="choices-container">
+            <engine:VisualElement editor-extension-mode="true" style="flex-direction: row; justify-content: center; align-items: center;">
+                <!-- Preview Card 1 -->
+                <ui:Button name="PreviewCard1" class="upgrade-choice-card">
+                    <ui:VisualElement name="CardHeader" class="card-header">
+                        <ui:VisualElement name="Icon" class="upgrade-icon" />
+                        <ui:Label name="UpgradeTitle" text="Awesome Upgrade" class="upgrade-title-label" />
+                    </ui:VisualElement>
+                    <ui:Label name="UpgradeDescription" text="This describes the awesome effect of the upgrade." class="upgrade-description-label" />
+                </ui:Button>
+                <!-- Preview Card 2 -->
+                <ui:Button name="PreviewCard2" class="upgrade-choice-card">
+                    <ui:VisualElement name="CardHeader" class="card-header">
+                        <ui:VisualElement name="Icon" class="upgrade-icon" />
+                        <ui:Label name="UpgradeTitle" text="Another Choice" class="upgrade-title-label" />
+                    </ui:VisualElement>
+                    <ui:Label name="UpgradeDescription" text="A different but equally cool effect is detailed here." class="upgrade-description-label" />
+                </ui:Button>
+                <!-- Preview Card 3 -->
+                <ui:Button name="PreviewCard3" class="upgrade-choice-card">
+                    <ui:VisualElement name="CardHeader" class="card-header">
+                        <ui:VisualElement name="Icon" class="upgrade-icon" />
+                        <ui:Label name="UpgradeTitle" text="Generic Boost" class="upgrade-title-label" />
+                    </ui:VisualElement>
+                    <ui:Label name="UpgradeDescription" text="A simple and repeatable stat increase." class="upgrade-description-label" />
+                </ui:Button>
+            </engine:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

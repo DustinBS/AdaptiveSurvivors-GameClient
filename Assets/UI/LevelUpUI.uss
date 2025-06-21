@@ -1,8 +1,4 @@
 /* GameClient/Assets/UI/LevelUpUI.uss */
-
-@import url("Theme.uss");
-
-
 /* --- Main Panel --- */
 .level-up-panel {
     width: 100%;
@@ -11,14 +7,15 @@
     align-items: center;
     justify-content: center;
     background-color: var(--color-background-overlay);
-    padding: 20px;
+    padding-bottom: 30px;
 }
 
 .title-label {
-    font-size: var(--font-size-title);
+    font-size: var(--font-size-large);
     color: var(--color-text-accent);
     -unity-font-style: bold;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    margin-bottom: 0px;
     flex-shrink: 0;
 }
 
@@ -28,58 +25,54 @@
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    width: 85%;
-    max-width: 1400px;
+    width: 90%;
+    max-width: 500px;
 }
 
 /* --- Upgrade Card Styling --- */
 .upgrade-choice-card {
-    flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: 15%;
-    min-width: 160px;
-    max-width: 220px;
-    height: 220px;
+    width: 150px;
+    height: 140px;
     background-color: var(--color-background-panel);
     border-color: var(--color-border-primary);
     border-width: 2px;
     border-radius: 12px;
-    padding: 15px;
-    margin: 10px;
-    align-items: center;
+    padding: 10px;
+    margin: 5px;
     justify-content: flex-start;
-    
-    /* MODIFIED: The 'transform' property has been removed from the transition
-       as it was the source of the rendering engine error. */
     transition-property: background-color, border-color;
     transition-duration: 0.15s;
 }
 
-/* --- HOVER/ACTIVE STATES (MODIFIED) --- */
-/* The problematic 'transform' property has been removed. */
+/* --- HOVER/ACTIVE STATES --- */
 .upgrade-choice-card:hover {
     background-color: var(--color-button-background-hover);
     border-color: var(--color-border-secondary);
 }
 
 .upgrade-choice-card:active {
-    /* We can use a slightly different color for the active state for feedback. */
     background-color: var(--color-button-background-active);
+}
+
+.top-container {
+    align-items: center;
+    width: 100%;
+}
+
+.description-container {
+    justify-content: center;
+    align-items: center;
+    height: 40%;
+    flex-shrink: 0;
+    width: 100%;
 }
 
 
 /* --- Card Content --- */
-.card-header {
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 12px;
-    width: 100%;
-}
-
 .upgrade-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 10px;
+    align-self: center;
+    width: 50px;
+    height: 50px;
     background-color: rgb(30, 30, 30);
     border-radius: 5px;
     border-width: 1px;
@@ -88,7 +81,7 @@
 }
 
 .upgrade-title-label {
-    font-size: var(--font-size-normal);
+    font-size: var(--font-size-small);
     color: var(--color-text-primary);
     -unity-font-style: bold;
     white-space: normal;
@@ -99,5 +92,5 @@
     font-size: var(--font-size-small);
     color: var(--color-text-off-white);
     white-space: normal;
-    -unity-text-align: upper-left;
+    -unity-text-align: middle-center;
 }

@@ -72,9 +72,7 @@ public class LevelUpUIManager : MonoBehaviour
 
         if (handle.Status == AsyncOperationStatus.Succeeded)
         {
-            // If loading was successful, store the result.
             _defaultIconSprite = handle.Result;
-            Debug.Log($"Default fallback icon '{DEFAULT_ICON_ADDRESS}' loaded successfully from Addressables.");
         }
         else
         {
@@ -135,22 +133,37 @@ public class LevelUpUIManager : MonoBehaviour
 
     private void CreateChoiceCardPool()
     {
+        choicesContainer.Clear();
+
         for (int i = 0; i < MAX_CHOICES; i++)
         {
             var cardButton = new Button();
             cardButton.AddToClassList("upgrade-choice-card");
-            var cardHeader = new VisualElement { name = "CardHeader" };
-            cardHeader.AddToClassList("card-header");
+
+            var topContainer = new VisualElement { name = "TopContainer" };
+            topContainer.AddToClassList("top-container");
+
+            var descriptionContainer = new VisualElement { name = "DescriptionContainer" };
+            descriptionContainer.AddToClassList("description-container");
+
+            // --- Elements for the Top Container ---
             var icon = new VisualElement { name = "Icon" };
             icon.AddToClassList("upgrade-icon");
             var titleLabel = new Label { name = "UpgradeTitle" };
             titleLabel.AddToClassList("upgrade-title-label");
+
+            // --- Element for the Description Container ---
             var descriptionLabel = new Label { name = "UpgradeDescription" };
             descriptionLabel.AddToClassList("upgrade-description-label");
-            cardHeader.Add(icon);
-            cardHeader.Add(titleLabel);
-            cardButton.Add(cardHeader);
-            cardButton.Add(descriptionLabel);
+
+            // --- Assemble the card ---
+            topContainer.Add(icon);
+            topContainer.Add(titleLabel);
+            descriptionContainer.Add(descriptionLabel);
+
+            cardButton.Add(topContainer);
+            cardButton.Add(descriptionContainer);
+
             cardButton.style.display = DisplayStyle.None;
             choicesContainer.Add(cardButton);
             _choiceCardPool.Add(cardButton);
