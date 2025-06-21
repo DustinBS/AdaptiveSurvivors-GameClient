@@ -15,7 +15,7 @@ using System.Collections.Generic;
 public class DialogueUIController : MonoBehaviour
 {
     // --- Public Delegates & Enums ---
-    public Action<PlayerResponse> OnChoiceSelected;
+    public event Action<PlayerResponse> OnChoiceSelected;
     public enum PortraitSide { Player, NPC }
 
     // --- UI Element References ---
@@ -48,6 +48,29 @@ public class DialogueUIController : MonoBehaviour
 
         // Start with the UI hidden
         ShowDialogue(false);
+    }
+
+    // OnEnable is called when the object becomes active, including after a scene load.
+    void OnEnable()
+    {
+        // Find the singleton instance and register this UI controller with it.
+        if (DialogueManager.Instance != null)
+        {
+            Debug.Log("DialogueUIController registered with DialogueManager.");
+            DialogueManager.Instance.RegisterUIController(this);
+        }
+    }
+
+    // OnDisable is called when the object becomes inactive, including when it's about to be destroyed by a scene change.
+    void OnDisable()
+    {
+        // Important: Unregister itself to prevent memory leaks and null reference errors
+        // when the DialogueManager tries to call a method on a destroyed object.
+        if (DialogueManager.Instance != null)
+        {
+            Debug.Log("DialogueUIController unregistered from DialogueManager.");
+            DialogueManager.Instance.UnregisterUIController(this);
+        }
     }
 
     /// <summary>

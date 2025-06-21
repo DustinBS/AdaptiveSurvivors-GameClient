@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections;
 using UnityEngine.InputSystem;
+using System.Collections.Generic; // Added for List<T>
 
 /// <summary>
 /// A stateful singleton manager that controls the interactive dialogue system.
@@ -24,59 +25,121 @@ public class DialogueManager : MonoBehaviour
     }
 
     [Header("Component References")]
-    [Tooltip("The controller for the dialogue UI. Drag the GameObject with the DialogueUIController script here.")]
-    [SerializeField] private DialogueUIController uiController;
+    // registered at runtime
+    private DialogueUIController uiController;
     [SerializeField] private PlayerData playerData;
+
+    [Header("Dialogue Settings")]
+    [Tooltip("The delay in seconds after a line finishes naturally before the player can continue.")]
+    [SerializeField] private float naturalEndDelay = 0.5f;
+    [Tooltip("The speed of the typewriter effect in characters per second.")]
+    [SerializeField] private float typewriterSpeed = 30f;
 
     [Header("LLM Settings")]
     [SerializeField] private bool useDebugMode = true;
     [SerializeField] private string cloudFunctionUrl;
     [SerializeField] private Sprite defaultPortrait;
+    [Tooltip("A pool of phrases to display randomly while waiting for an LLM response.")]
+    [SerializeField] private List<string> llmThinkingPhrases = new List<string> { "Hmm...", "Let me think...", "Just a moment.", "..." };
+
 
     // --- State Management ---
+    private string _currentLineFullText; // Caches the full text of the line currently being displayed.
+
+    private bool isWaitingForLLM = false; // Flag to track if we're in the LLM waiting state.
+    private List<string> currentThinkingPhrases; // The temporary pool of phrases for the current request.
+
     private DialogueState currentState;
     private DialogueData currentConversation;
     private NPCController currentNpc;
     private int currentLineIndex;
     private Coroutine typewriterCoroutine;
     private PlayerControls playerControls;
+    private bool acceptInput = true; // NEW: Flag to control input processing
 
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); }
         else { Instance = this; }
 
-        playerControls = PlayerInputManager.Instance.PlayerControls;
         currentState = DialogueState.Inactive;
     }
 
-    void OnEnable()
+    void Start()
     {
-        playerControls.UI.Submit.performed += OnSubmitPerformed;
-        if (uiController != null)
+        // 1. Safely get the controls instance.
+        playerControls = PlayerInputManager.Instance.PlayerControls;
+
+        // 2. Immediately subscribe to the necessary events.
+        if (playerControls != null)
         {
-            uiController.OnChoiceSelected += OnPlayerResponseClicked;
+            Debug.Log("DialogueManager: Registering input action for Submit in Start().");
+            playerControls.UI.Submit.performed += OnSubmitPerformed;
+        }
+        else
+        {
+            Debug.LogError("DialogueManager: PlayerControls could not be found in Start(). Dialogue input will not work.");
         }
     }
 
     void OnDisable()
     {
-        playerControls.UI.Submit.performed -= OnSubmitPerformed;
+        if (playerControls != null)
+        {
+            Debug.Log("DialogueManager: Unregistering input action for Submit.");
+            playerControls.UI.Submit.performed -= OnSubmitPerformed;
+        }
+    }
+
+    // Public method for UI controllers to register themselves.
+    public void RegisterUIController(DialogueUIController controller)
+    {
+        // First, always unsubscribe from the old controller, if one exists.
+        // This prevents duplicate subscriptions and cleans up any lingering references.
         if (uiController != null)
         {
             uiController.OnChoiceSelected -= OnPlayerResponseClicked;
+        }
+
+        // Now, assign the new controller.
+        uiController = controller;
+
+        // Subscribe to the new controller's event if it's not null.
+        if (uiController != null)
+        {
+            uiController.OnChoiceSelected += OnPlayerResponseClicked;
+        }
+        // This else block is a safeguard for conversations that might be active during a scene transition.
+        else if (currentState != DialogueState.Inactive)
+        {
+            Debug.LogWarning("A new scene was loaded, but no DialogueUIController was found. Ending active conversation.");
+            EndConversation();
+        }
+    }
+
+    // Public method for UI controllers to unregister themselves.
+    public void UnregisterUIController(DialogueUIController controller)
+    {
+        if (uiController == controller)
+        {
+            if (uiController != null)
+            {
+                uiController.OnChoiceSelected -= OnPlayerResponseClicked;
+            }
+            uiController = null;
         }
     }
 
     public void StartConversation(DialogueData dialogue, NPCController npc)
     {
-        if (currentState != DialogueState.Inactive) return;
+        if (currentState != DialogueState.Inactive || uiController == null) return;
         if (dialogue == null || dialogue.lines.Count == 0 || uiController == null) return;
 
         PlayerInputManager.Instance.SwitchToUIControls();
         currentConversation = dialogue;
         currentNpc = npc;
         currentLineIndex = -1;
+        acceptInput = true; // Ensure input is accepted at the start
 
         uiController.UpdatePortraits(playerData.characterData.characterPortrait, npc.NPCPortrait ?? defaultPortrait);
         uiController.ShowDialogue(true);
@@ -86,11 +149,22 @@ public class DialogueManager : MonoBehaviour
 
     private void OnSubmitPerformed(InputAction.CallbackContext context)
     {
-        // Only process submit input based on the current state.
+        if (!acceptInput) return;
+
         switch (currentState)
         {
             case DialogueState.DisplayingLine:
-                FinishLine();
+                // If we are waiting for the LLM, show the next thinking phrase.
+                if (isWaitingForLLM)
+                {
+                    DisplayNextThinkingPhrase();
+                }
+                // Otherwise, perform the normal line skip.
+                else
+                {
+                    FinishLine();
+                    StartCoroutine(InputCooldown(true));
+                }
                 break;
             case DialogueState.LineFinished:
                 AdvanceConversation();
@@ -100,7 +174,6 @@ public class DialogueManager : MonoBehaviour
 
     private void AdvanceConversation()
     {
-        // Check if we are at the end of the conversation.
         currentLineIndex++;
         if (currentLineIndex >= currentConversation.lines.Count)
         {
@@ -124,8 +197,9 @@ public class DialogueManager : MonoBehaviour
             speakerName = currentNpc.NPCName;
         }
 
-        uiController.HideChoices();
+        _currentLineFullText = line.text;
 
+        uiController.HideChoices();
         if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
 
         if (line.isLLMGenerated)
@@ -134,7 +208,7 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, line.text));
+            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
         }
     }
 
@@ -143,12 +217,16 @@ public class DialogueManager : MonoBehaviour
         if (typewriterCoroutine != null)
         {
             StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = null;
         }
 
         if (currentState == DialogueState.Ending || currentConversation == null) return;
 
         var currentLine = currentConversation.lines[currentLineIndex];
-        uiController.SetDialogueLine(currentLine.speaker == DialogueLine.Speaker.Player ? playerData.characterData.characterName : currentNpc.NPCName, currentLine.text);
+        uiController.SetDialogueLine(
+            currentLine.speaker == DialogueLine.Speaker.Player ? playerData.characterData.characterName : currentNpc.NPCName,
+            _currentLineFullText
+        );
 
         ShowPlayerResponses(currentLine);
     }
@@ -157,8 +235,6 @@ public class DialogueManager : MonoBehaviour
     {
         if (line.playerResponses != null && line.playerResponses.Count > 0)
         {
-            uiController.SetActiveSpeaker(DialogueUIController.PortraitSide.Player);
-            uiController.SetDialogueLine(playerData.characterData.characterName, "...");
             currentState = DialogueState.AwaitingChoice;
             uiController.ShowContinuePrompt(false);
             uiController.DisplayChoices(line.playerResponses);
@@ -195,41 +271,119 @@ public class DialogueManager : MonoBehaviour
         uiController.SetDialogueLine(speakerName, "");
 
         string currentText = "";
+        // MODIFIED: Use the typewriterSpeed variable for character delay calculation
+        float charDelay = 1f / typewriterSpeed;
+        if (charDelay <= 0) charDelay = 0.001f; // Prevent division by zero
+
         foreach (char letter in text.ToCharArray())
         {
             if (currentState == DialogueState.Ending) yield break;
             currentText += letter;
             uiController.SetDialogueLine(speakerName, currentText);
-            yield return new WaitForSeconds(0.03f);
+            yield return new WaitForSeconds(charDelay);
         }
 
         if (currentState != DialogueState.Ending)
         {
+           // The line finished displaying naturally.
            ShowPlayerResponses(currentConversation.lines[currentLineIndex]);
+           // MODIFIED: Start the cooldown to prevent accidental skipping.
+           StartCoroutine(InputCooldown(false));
         }
     }
 
     private IEnumerator RequestLLMCommentary(DialogueLine line, string speakerName)
     {
         currentState = DialogueState.DisplayingLine;
+        isWaitingForLLM = true; // Set the flag
         uiController.ShowContinuePrompt(false);
-        uiController.SetDialogueLine(speakerName, "Hmmm...");
-        string generatedText = "This is default LLM debug text. The real call would go here.";
 
+        // Initialize the thinking phrases for this request.
+        DisplayNextThinkingPhrase(true);
+
+        string generatedText;
+
+        // --- This is where your actual web request would go ---
         if (useDebugMode)
         {
-            yield return new WaitForSeconds(1.5f);
+            // Simulate a long network delay for testing.
+            yield return new WaitForSeconds(5.0f);
+            generatedText = "This is a dynamically generated response after a long wait!";
         }
         else
         {
-            // Full Web Request Logic would go here...
+            // Here you would implement your async UnityWebRequest logic.
+            // For now, we'll just use a placeholder.
+            generatedText = "This should be replaced by your real web request result.";
+            // Example:
+            // var request = UnityWebRequest.Post(cloudFunctionUrl, "{}");
+            // yield return request.SendWebRequest();
+            // if(request.result == UnityWebRequest.Result.Success) {
+            //    generatedText = request.downloadHandler.text;
+            // } else {
+            //    generatedText = "Sorry, I'm having trouble thinking right now.";
+            // }
         }
+        _currentLineFullText = generatedText;
+
+        isWaitingForLLM = false;
 
         if (currentState != DialogueState.Ending)
         {
+            // This prevents the user's spam-clicking from skipping the result.
+            StartCoroutine(InputCooldown(customDuration: 1.0f));
+
             if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
-            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, generatedText));
+            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
         }
+    }
+
+
+    // A helper method to manage and display the thinking phrases.
+    private void DisplayNextThinkingPhrase(bool isFirstPhrase = false)
+    {
+        // If this is the first phrase or our temporary pool is empty, refill it.
+        if (isFirstPhrase || currentThinkingPhrases == null || currentThinkingPhrases.Count == 0)
+        {
+            // Make a copy from the master list so we can safely remove items.
+            currentThinkingPhrases = new List<string>(llmThinkingPhrases);
+        }
+
+        // Pick a random phrase from the current pool.
+        int randomIndex = Random.Range(0, currentThinkingPhrases.Count);
+        string phrase = currentThinkingPhrases[randomIndex];
+
+        // Remove it so it's not picked again until the pool is refilled.
+        currentThinkingPhrases.RemoveAt(randomIndex);
+
+        // Display the thinking phrase.
+        uiController.SetDialogueLine(currentNpc.NPCName, phrase);
+    }
+
+    // NEW: Coroutine to manage input cooldown.
+    /// <summary>
+    /// Prevents input for a short duration to avoid accidental skips.
+    /// </summary>
+    /// <param name="isSkipped">If true, uses a minimal delay. If false, uses the configured natural end delay.</param>
+    private IEnumerator InputCooldown(bool isSkipped = false, float? customDuration = null)
+    {
+        acceptInput = false;
+
+        if (customDuration.HasValue)
+        {
+            // If a custom duration is provided, use it.
+            yield return new WaitForSeconds(customDuration.Value);
+        }
+        else if (isSkipped)
+        {
+            yield return new WaitForEndOfFrame();
+        }
+        else
+        {
+            yield return new WaitForSeconds(naturalEndDelay);
+        }
+
+        acceptInput = true;
     }
 
     public void EndConversation()
@@ -237,6 +391,12 @@ public class DialogueManager : MonoBehaviour
         if (currentState == DialogueState.Inactive) return;
 
         currentState = DialogueState.Ending;
+        // MODIFIED: Safely stop the coroutine if it's running
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = null;
+        }
 
         if (uiController != null)
         {

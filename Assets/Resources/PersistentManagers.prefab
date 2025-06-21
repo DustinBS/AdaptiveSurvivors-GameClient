@@ -65,6 +65,56 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _worldOffset: {x: 0, y: -1, z: 0}
+--- !u!1 &1486636506789562143
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3929862649271106246}
+  - component: {fileID: 115106035386984007}
+  m_Layer: 0
+  m_Name: _DialogueManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3929862649271106246
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1486636506789562143}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 755616236843079766}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &115106035386984007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1486636506789562143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3ec5aaa91226d645894bf5f787be154, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
+  naturalEndDelay: 0.5
+  typewriterSpeed: 30
+  useDebugMode: 1
+  cloudFunctionUrl: 
+  defaultPortrait: {fileID: -1556463978589607206, guid: 509e8e9f81098eb4eb8bd8d78a021431, type: 3}
 --- !u!1 &3814142388022021879
 GameObject:
   m_ObjectHideFlags: 0
@@ -200,6 +250,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 3929862649271106246}
   - {fileID: 4998381735345654186}
   - {fileID: 8586891047552954800}
   - {fileID: 1317636946121845116}
