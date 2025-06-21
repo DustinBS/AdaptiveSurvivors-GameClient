@@ -28,7 +28,7 @@ public class PlayerStatus : MonoBehaviour
     /// Event fired when health changes. Parameters: currentHealth (float), maxHealth (float).
     /// </summary>
     public event Action<float, float> OnHealthChanged;
-    
+
     /// <summary>
     /// A static event fired globally when the player's health reaches zero.
     /// Static events can be subscribed to by any script without needing a direct reference to this component instance.
@@ -93,10 +93,10 @@ public class PlayerStatus : MonoBehaviour
 
         currentHealth += amount;
         if (currentHealth > maxHealth) currentHealth = maxHealth;
-        
+
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
-    
+
     /// <summary>
     /// Handles the player's death sequence.
     /// </summary>
@@ -113,7 +113,6 @@ public class PlayerStatus : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    #region Unchanged Methods
     public bool ConsumeMana(float amount)
     {
         if (isDead) return false;
@@ -144,5 +143,4 @@ public class PlayerStatus : MonoBehaviour
 
         kafkaClient.SendGameplayEvent("player_status_event", playerId, payload);
     }
-    #endregion
 }
