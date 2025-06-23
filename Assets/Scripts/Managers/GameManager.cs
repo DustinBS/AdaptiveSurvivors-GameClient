@@ -1,7 +1,7 @@
 // GameClient/Assets/Scripts/Managers/GameManager.cs
 
 using UnityEngine;
-using System.Collections; // Required for IEnumerator
+using System.Collections;
 
 /// <summary>
 /// A scene-specific manager that controls the overall game state, including wave progression,
@@ -9,13 +9,7 @@ using System.Collections; // Required for IEnumerator
 /// </summary>
 public class GameManager : MonoBehaviour
 {
-    // A public enum to clearly define the possible states of the game session.
-    public enum GameState
-    {
-        Playing,
-        Paused,
-        GameOver
-    }
+    public enum GameState { Playing, Paused, GameOver }
 
     // --- Singleton Instance ---
     // Provides easy, static access to the manager from other scripts in the same scene.
@@ -30,20 +24,22 @@ public class GameManager : MonoBehaviour
     // The current state of the game. Making it public allows other scripts to check it if needed.
     public GameState CurrentState { get; private set; }
 
+    [Header("Wave Boss Spawning")]
+    [Tooltip("The EnemyData for the special elite to spawn between waves.")]
+    [SerializeField] private EnemyData waveEndElite;
+    [Tooltip("Reference to the scene's EnemySpawner component.")]
+    [SerializeField] private EnemySpawner enemySpawner;
+
     void Awake()
     {
-        // Scene-specific singleton pattern.
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
-
-        // The game always starts in the 'Playing' state.
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
         CurrentState = GameState.Playing;
+
+        if (enemySpawner == null)
+        {
+            enemySpawner = FindFirstObjectByType<EnemySpawner>();
+        }
     }
 
     void OnEnable()
@@ -70,7 +66,7 @@ public class GameManager : MonoBehaviour
         timeElapsed += Time.deltaTime;
 
         // Example logic for advancing waves.
-        if (timeElapsed >= currentWave * 60f)
+        if (timeElapsed >= currentWave * 10f)
         {
             AdvanceWave();
         }
@@ -94,8 +90,17 @@ public class GameManager : MonoBehaviour
 
     private void AdvanceWave()
     {
+        Debug.Log($"Wave {currentWave} complete! Spawning elite boss...");
+        if (enemySpawner != null && waveEndElite != null)
+        {
+            enemySpawner.SpawnSpecialEnemy(waveEndElite);
+        }
+        else
+        {
+            Debug.LogWarning("Cannot spawn wave end elite. Spawner or elite data is not assigned in GameManager.", this);
+        }
+
         currentWave++;
         Debug.Log($"Advancing to Wave {currentWave}!");
-        // Here you might trigger events for the EnemySpawner to change its behavior.
     }
 }

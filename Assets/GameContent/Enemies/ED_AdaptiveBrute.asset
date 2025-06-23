@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ad4c174c42c3c4418a4a61799091f49, type: 3}
+  m_Name: ED_AdaptiveBrute
+  m_EditorClassIdentifier: 
+  enemyID: elite_adaptive_brute
+  enemyName: AdaptiveBrute
+  maxHealth: 250
+  xpValue: 100
+  movementStrategy: {fileID: 11400000, guid: 4c982349182111142b11d884a77a9624, type: 2}
+  attackStrategy: {fileID: 11400000, guid: e6f78d19d91245a4eb1fd119120600dc, type: 2}
+  visualPrefab: {fileID: 4734188826638042580, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}

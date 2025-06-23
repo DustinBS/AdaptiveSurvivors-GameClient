@@ -325,10 +325,8 @@ public class KafkaClient : MonoBehaviour
     public class AdaptiveParameters
     {
         public string playerId;
-        public Dictionary<string, double> enemyResistances;
-        public string eliteBehaviorShift;
-        public HashSet<string> eliteStatusImmunities;
-        public Dictionary<string, string> breakableObjectBuffsDebuffs;
+        public string adaptation_type;
+        public Dictionary<string, string> breakableObjectBuffsDebuffs; // not implemented yet
         public long timestamp;
     }
 }

@@ -397,6 +397,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentWave: 1
   timeElapsed: 0
+  waveEndElite: {fileID: 11400000, guid: 977a424087b197a40b9a45a7ee41c5d5, type: 2}
+  enemySpawner: {fileID: 1209082159}
 --- !u!4 &639988202
 Transform:
   m_ObjectHideFlags: 0
@@ -463,6 +465,10 @@ PrefabInstance:
     - target: {fileID: 6313925311324587010, guid: 43d387cc23ee821449fcce0cc4477844, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988929795559143986, guid: 43d387cc23ee821449fcce0cc4477844, type: 3}
+      propertyPath: xpToNextLevel
+      value: 100
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -741,7 +747,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fodderEnemies:
-  - {fileID: 11400000, guid: 977a424087b197a40b9a45a7ee41c5d5, type: 2}
+  - {fileID: 11400000, guid: 753dc9e2209bc78458abd57db4a503bc, type: 2}
   eliteEnemies: []
   spawnInterval: 2
   maxEnemiesOnScreen: 20

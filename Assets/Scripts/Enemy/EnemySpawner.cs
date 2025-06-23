@@ -115,6 +115,49 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Spawns a specific enemy, typically a boss or special elite, at a calculated position.
+    /// This can be called by a GameManager at the end of a wave.
+    /// </summary>
+    /// <param name="specialEnemyData">The EnemyData asset for the enemy to spawn.</param>
+    public void SpawnSpecialEnemy(EnemyData specialEnemyData)
+    {
+        if (specialEnemyData == null || specialEnemyData.visualPrefab == null)
+        {
+            Debug.LogError("SpawnSpecialEnemy called with invalid EnemyData.", this);
+            return;
+        }
+
+        if (specialEnemyData.movementStrategy == null || specialEnemyData.attackStrategy == null)
+        {
+            Debug.LogError($"EnemyData '{specialEnemyData.name}' is missing a movement or attack strategy.", specialEnemyData);
+            return;
+        }
+
+        Vector3 spawnPosition = GetRandomSpawnPosition();
+        if (spawnPosition == Vector3.zero) spawnPosition = transform.position + Vector3.up * 10f; // Fallback
+
+        GameObject enemyInstance = Instantiate(specialEnemyData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
+
+        EnemyHealth enemyHealth = enemyInstance.GetComponent<EnemyHealth>();
+        if (enemyHealth != null)
+        {
+            enemyHealth.Initialize(specialEnemyData);
+        }
+
+        EnemyBrain brain = enemyInstance.GetComponent<EnemyBrain>();
+        if (brain != null)
+        {
+            brain.Initialize(
+                playerTransform,
+                specialEnemyData.movementStrategy,
+                specialEnemyData.attackStrategy,
+                specialEnemyData.movementStrategy.baseSpeed,
+                specialEnemyData.attackStrategy.baseDamage
+            );
+        }
+    }
+
     private EnemyData ChooseEnemyType()
     {
         bool canSpawnElite = eliteEnemies.Any() &&

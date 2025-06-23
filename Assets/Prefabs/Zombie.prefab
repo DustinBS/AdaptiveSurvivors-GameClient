@@ -13,10 +13,9 @@ GameObject:
   - component: {fileID: 7524550127683632643}
   - component: {fileID: 4015095751489468881}
   - component: {fileID: 6018287673175076693}
-  - component: {fileID: 8345742128751347406}
   - component: {fileID: 6557103559756317515}
   m_Layer: 0
-  m_Name: BasicEnemy_01
+  m_Name: Zombie
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -118,7 +117,7 @@ Rigidbody2D:
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 1
-  m_Constraints: 0
+  m_Constraints: 4
 --- !u!114 &4015095751489468881
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,27 +142,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 059786ac6457c8f418919279e2635ce9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EnemyId: goblin_001
-  EnemyType: basic_grunt
   currentHealth: 0
   maxHealth: 100
   xpValue: 0
---- !u!114 &8345742128751347406
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4734188826638042580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cce31f24226d6d842a0984aaefd83bfb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enemyId: 
-  enemyHealth: {fileID: 6018287673175076693}
-  baseMoveSpeed: 3
-  baseAttackDamage: 5
 --- !u!70 &6557103559756317515
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
