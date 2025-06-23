@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Defines the static properties of an enemy type using a ScriptableObject.
-/// This allows for creating and managing different enemy types as assets in the project.
+/// This has been refactored to use the Strategy Pattern, referencing AI behaviors
+/// instead of holding direct stat values like speed and damage.
 /// </summary>
 [CreateAssetMenu(fileName = "NewEnemyData", menuName = "Adaptive Survivors/Enemy Data")]
 public class EnemyData : ScriptableObject
@@ -16,20 +17,21 @@ public class EnemyData : ScriptableObject
     [Tooltip("Display name for the enemy, used in UI or logs.")]
     public string enemyName;
 
-    [Header("Gameplay Stats")]
+    [Header("Core Stats")]
     [Tooltip("The base health of the enemy.")]
     public float maxHealth = 100f;
-
-    [Tooltip("How fast the enemy moves towards the player.")]
-    public float moveSpeed = 3f;
-
-    [Tooltip("Damage dealt to the player on contact.")]
-    public float baseDamage = 10f;
 
     [Tooltip("Experience points granted to the player upon defeating this enemy.")]
     public float xpValue = 10f;
 
+    [Header("AI Behavior (Strategy Pattern)")]
+    [Tooltip("The movement behavior asset for this enemy.")]
+    public MovementStrategy movementStrategy;
+
+    [Tooltip("The attack behavior asset for this enemy.")]
+    public AttackStrategy attackStrategy;
+
     [Header("Visuals")]
-    [Tooltip("The prefab containing the enemy's visuals, Rigidbody2D, colliders, and scripts like EnemyHealth.")]
+    [Tooltip("The prefab containing the enemy's visuals and core components like EnemyBrain and EnemyHealth.")]
     public GameObject visualPrefab;
 }

@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9ad4c174c42c3c4418a4a61799091f49, type: 3}
-  m_Name: Goblin_Fodder
+  m_Name: ED_Zombie
   m_EditorClassIdentifier: 
-  enemyID: goblin_fodder
-  enemyName: Goblin
+  enemyID: 'zombie_fodder '
+  enemyName: Zombie
   maxHealth: 25
-  moveSpeed: 3
-  baseDamage: 5
   xpValue: 10
+  movementStrategy: {fileID: 11400000, guid: 4c982349182111142b11d884a77a9624, type: 2}
+  attackStrategy: {fileID: 11400000, guid: e6f78d19d91245a4eb1fd119120600dc, type: 2}
   visualPrefab: {fileID: 4734188826638042580, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}

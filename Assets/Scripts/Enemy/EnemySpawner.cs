@@ -5,9 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Manages the spawning of enemies based on EnemyData ScriptableObjects.
-/// It instantiates enemy prefabs and then initializes all necessary components
-/// (health, movement, attack) with data from the corresponding asset.
+/// Manages spawning enemies. Now updated to work with the EnemyBrain and Strategy pattern.
+/// It initializes the EnemyBrain with strategies defined in the EnemyData asset.
 /// </summary>
 public class EnemySpawner : MonoBehaviour
 {
@@ -61,9 +60,10 @@ public class EnemySpawner : MonoBehaviour
     {
         spawnTimer -= Time.deltaTime;
 
-        if (spawnTimer <= 0)
+        if (spawnTimer <= 0f)
         {
-            if (GameObject.FindGameObjectsWithTag("Enemy").Length < maxEnemiesOnScreen)
+            // Simple check to avoid FindObjectsOfType if possible
+            if (transform.childCount < maxEnemiesOnScreen)
             {
                 SpawnEnemy();
             }
@@ -76,12 +76,17 @@ public class EnemySpawner : MonoBehaviour
         EnemyData enemyToSpawnData = ChooseEnemyType();
         if (enemyToSpawnData == null || enemyToSpawnData.visualPrefab == null) return;
 
+        // Ensure that the strategies are assigned in the EnemyData asset
+        if (enemyToSpawnData.movementStrategy == null || enemyToSpawnData.attackStrategy == null)
+        {
+            Debug.LogError($"EnemyData '{enemyToSpawnData.name}' is missing a movement or attack strategy. Cannot spawn.", enemyToSpawnData);
+            return;
+        }
+
         Vector3 spawnPosition = GetRandomSpawnPosition();
         if (spawnPosition == Vector3.zero) return;
 
-        GameObject enemyInstance = Instantiate(enemyToSpawnData.visualPrefab, spawnPosition, Quaternion.identity);
-
-        // --- Initialize ALL enemy components from the data asset ---
+        GameObject enemyInstance = Instantiate(enemyToSpawnData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
 
         // Initialize Health
         EnemyHealth enemyHealth = enemyInstance.GetComponent<EnemyHealth>();
@@ -90,18 +95,23 @@ public class EnemySpawner : MonoBehaviour
             enemyHealth.Initialize(enemyToSpawnData);
         }
 
-        // Initialize Movement
-        EnemyMovement enemyMovement = enemyInstance.GetComponent<EnemyMovement>();
-        if (enemyMovement != null)
+        // Get the EnemyBrain component
+        EnemyBrain brain = enemyInstance.GetComponent<EnemyBrain>();
+        if (brain != null)
         {
-            enemyMovement.Initialize(playerTransform, enemyToSpawnData.moveSpeed);
+            // Initialize the brain with the strategies and base stats from the data asset.
+            // The base stats are now correctly sourced from the strategy assets themselves.
+            brain.Initialize(
+                playerTransform,
+                enemyToSpawnData.movementStrategy,
+                enemyToSpawnData.attackStrategy,
+                enemyToSpawnData.movementStrategy.baseSpeed,
+                enemyToSpawnData.attackStrategy.baseDamage
+            ); //
         }
-
-        // Initialize Attack
-        EnemyAttack enemyAttack = enemyInstance.GetComponent<EnemyAttack>();
-        if (enemyAttack != null)
+        else
         {
-            enemyAttack.Initialize(enemyToSpawnData.baseDamage);
+            Debug.LogError($"Spawned enemy '{enemyToSpawnData.name}' is missing an EnemyBrain component on its prefab.", enemyInstance);
         }
     }
 
@@ -139,7 +149,7 @@ public class EnemySpawner : MonoBehaviour
                 return spawnPos;
             }
         }
-        return Vector3.zero;
+        return playerTransform.position + (Vector3.right * spawnRadius);
     }
 
     void OnDrawGizmosSelected()
