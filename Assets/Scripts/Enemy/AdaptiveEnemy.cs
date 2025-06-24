@@ -1,6 +1,7 @@
 // GameClient/Assets/Scripts/Enemy/AdaptiveEnemy.cs
 
 using UnityEngine;
+using Newtonsoft.Json;
 
 /// <summary>
 /// A simple bridge between Kafka messages and the AdaptiveFormController.
@@ -17,32 +18,37 @@ public class AdaptiveEnemy : MonoBehaviour
 
     void OnEnable()
     {
-        KafkaClient.onAdaptiveParametersReceived += OnAdaptiveParametersReceived;
+        KafkaClient.OnAdaptiveMessageReceived += OnAdaptiveMessageReceived;
     }
 
     void OnDisable()
     {
-        KafkaClient.onAdaptiveParametersReceived -= OnAdaptiveParametersReceived;
+        KafkaClient.OnAdaptiveMessageReceived -= OnAdaptiveMessageReceived;
     }
 
-    private void OnAdaptiveParametersReceived(KafkaClient.AdaptiveParameters parameters)
+    private void OnAdaptiveMessageReceived(KafkaClient.AdaptiveMessageEnvelope envelope)
     {
-        if (formController == null) return;
-
-        // Only process messages that explicitly contain an adaptation_type.
-        // This prevents messages from other systems (like the Flink job)
-        // from causing unintended state changes.
-        if (string.IsNullOrEmpty(parameters.adaptation_type))
+        // --- ROUTING LOGIC ---
+        // Only process messages specifically intended for form adaptation.
+        if (envelope.message_type != "form_adaptation")
         {
             return;
         }
 
-        bool adaptToMelee = parameters.adaptation_type == "juggernaut";
-        formController.ApplyAdaptationFromMessage(adaptToMelee);
-    }
+        try
+        {
+            // Deserialize the payload string into the specific payload object.
+            var payload = JsonConvert.DeserializeObject<KafkaClient.FormAdaptationPayload>(envelope.payload);
 
-    public float GetDamageResistance(string weaponId)
-    {
-        return 0f;
+            if (formController != null)
+            {
+                bool adaptToMelee = payload.adaptation_type == "juggernaut";
+                formController.ApplyAdaptationFromMessage(adaptToMelee);
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to deserialize FormAdaptationPayload: {e.Message}\nPayload: {envelope.payload}");
+        }
     }
 }

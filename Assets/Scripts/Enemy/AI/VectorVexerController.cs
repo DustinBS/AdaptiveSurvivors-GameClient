@@ -2,10 +2,12 @@
 
 using UnityEngine;
 using System.Collections.Generic; // Required for List
+using Newtonsoft.Json;
 
 /// <summary>
 /// Manages the unique behavior of the Vector Vexer elite enemy.
 /// Listens for player dashes and triggers its "Vector Shift" ability.
+/// random prediction as an offline fallback
 /// </summary>
 [RequireComponent(typeof(EnemyBrain))]
 public class VectorVexerController : MonoBehaviour
@@ -20,15 +22,16 @@ public class VectorVexerController : MonoBehaviour
     private EnemyBrain enemyBrain;
     private float lastAbilityTime = -Mathf.Infinity;
     private int consecutiveWrongPredictions = 0;
-    private Vector2 predictedDirection;
 
-    // A list of possible orthogonal directions for predictions.
+    // --- Prediction Logic ---
+    // Used for the OFFLINE FALLBACK.
+    private Vector2 randomFallbackPrediction;
+    // Used for ONLINE mode. Nullable so we know if we've ever received a message.
+    private Vector2? lastKafkaPrediction = null;
+
     private readonly List<Vector2> cardinalDirections = new List<Vector2>
     {
-        Vector2.up,
-        Vector2.down,
-        Vector2.left,
-        Vector2.right
+        Vector2.up, Vector2.down, Vector2.left, Vector2.right
     };
 
     void Awake()
@@ -38,19 +41,38 @@ public class VectorVexerController : MonoBehaviour
 
     void OnEnable()
     {
-        // Subscribe to events in a controlled manner.
         enemyBrain.OnInitialized += HandleBrainInitialized;
         PlayerMovement.OnPlayerDashed += OnPlayerDashed;
+        KafkaClient.OnAdaptiveMessageReceived += OnAdaptiveMessageReceived;
     }
 
     void OnDisable()
     {
-        // Always unsubscribe to prevent memory leaks.
         if (enemyBrain != null)
         {
             enemyBrain.OnInitialized -= HandleBrainInitialized;
         }
         PlayerMovement.OnPlayerDashed -= OnPlayerDashed;
+        KafkaClient.OnAdaptiveMessageReceived -= OnAdaptiveMessageReceived;
+    }
+
+    /// <summary>
+    /// Handler for Kafka messages. Filters for Vexer-specific prediction updates.
+    /// </summary>
+    private void OnAdaptiveMessageReceived(KafkaClient.AdaptiveMessageEnvelope envelope)
+    {
+        if (envelope.message_type != "vexer_prediction_update") return;
+
+        try
+        {
+            var payload = JsonConvert.DeserializeObject<KafkaClient.VexerPredictionPayload>(envelope.payload);
+            lastKafkaPrediction = new Vector2(payload.predicted_direction.dx, payload.predicted_direction.dy);
+            Debug.Log($"Vexer received new prediction from Kafka: {lastKafkaPrediction.Value}");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to deserialize VexerPredictionPayload: {e.Message}\nPayload: {envelope.payload}");
+        }
     }
 
     /// <summary>
@@ -58,8 +80,8 @@ public class VectorVexerController : MonoBehaviour
     /// </summary>
     private void HandleBrainInitialized()
     {
-        lastAbilityTime = -abilityCooldown; // Allow first ability use immediately.
-        MakeNewPrediction();
+        lastAbilityTime = -abilityCooldown;
+        MakeNewFallbackPrediction();
     }
 
     /// <summary>
@@ -67,58 +89,54 @@ public class VectorVexerController : MonoBehaviour
     /// </summary>
     private void OnPlayerDashed(Vector2 actualDashDirection)
     {
-        // Check if the ability is off cooldown.
         if (Time.time < lastAbilityTime + abilityCooldown) return;
-
         lastAbilityTime = Time.time;
 
-        // Reveal the prediction to the player using the feedback system.
-        ShowPredictionFeedback();
-
-        // Compare the prediction to the actual dash.
-        bool isCorrect = IsPredictionCorrect(actualDashDirection);
-
-        if (isCorrect)
+        // --- OFFLINE/ONLINE LOGIC ---
+        // Decide which prediction to use based on whether we've received data from Kafka.
+        Vector2 predictionToUse;
+        if (lastKafkaPrediction.HasValue)
         {
-            consecutiveWrongPredictions = 0;
-            // TODO: Play "correct prediction" sound/visuals
+            predictionToUse = lastKafkaPrediction.Value; // ONLINE: Use Kafka data
         }
         else
         {
-            consecutiveWrongPredictions++;
-            // TODO: Play "wrong prediction" sound/visuals
+            predictionToUse = randomFallbackPrediction; // OFFLINE: Use random fallback
         }
 
-        // --- TRIGGER TELEPORT LOGIC HERE ---
-        // We will implement this in the next phase. For now, we can log it.
-        Debug.Log($"Vexer used Vector Shift. Predicted: {predictedDirection}, Correct: {isCorrect}");
+        ShowPredictionFeedback(predictionToUse);
 
-        // Check for despawn condition.
+        bool isCorrect = IsPredictionCorrect(actualDashDirection, predictionToUse);
+
+        if (isCorrect) { consecutiveWrongPredictions = 0; }
+        else { consecutiveWrongPredictions++; }
+
+        Debug.Log($"Vexer used Vector Shift. Predicted: {predictionToUse}, Correct: {isCorrect}");
+
         if (consecutiveWrongPredictions >= wrongPredictionThreshold)
         {
             Despawn();
         }
         else
         {
-            // Prepare for the next cycle.
-            MakeNewPrediction();
+            // Always generate a new random prediction in case Kafka connection is lost.
+            MakeNewFallbackPrediction();
         }
     }
 
     /// <summary>
-    /// Selects a new random cardinal direction for the next prediction.
+    /// Generates a new random prediction for the offline fallback.
     /// </summary>
-    private void MakeNewPrediction()
+    private void MakeNewFallbackPrediction()
     {
         int randomIndex = Random.Range(0, cardinalDirections.Count);
-        predictedDirection = cardinalDirections[randomIndex];
-        // TODO: Update a visual indicator on the Vexer to show it's "ready".
+        randomFallbackPrediction = cardinalDirections[randomIndex];
     }
 
     /// <summary>
     /// Compares the Vexer's orthogonal prediction to the player's (potentially diagonal) dash.
     /// </summary>
-    private bool IsPredictionCorrect(Vector2 playerDashDirection)
+    private bool IsPredictionCorrect(Vector2 playerDashDirection, Vector2 predictedDirection)
     {
         // Find the dominant axis of the player's dash to compare against our cardinal prediction.
         Vector2 effectiveDirection;
@@ -137,15 +155,15 @@ public class VectorVexerController : MonoBehaviour
     /// <summary>
     /// Displays the predicted direction as text above the Vexer's head.
     /// </summary>
-    private void ShowPredictionFeedback()
+    private void ShowPredictionFeedback(Vector2 directionToShow)
     {
         if (ContextualFeedbackManager.Instance == null) return;
 
         string arrow = "?";
-        if (predictedDirection == Vector2.up) arrow = "↑";
-        if (predictedDirection == Vector2.down) arrow = "↓";
-        if (predictedDirection == Vector2.left) arrow = "←";
-        if (predictedDirection == Vector2.right) arrow = "→";
+        if (directionToShow == Vector2.up) arrow = "↑";
+        if (directionToShow == Vector2.down) arrow = "↓";
+        if (directionToShow == Vector2.left) arrow = "←";
+        if (directionToShow == Vector2.right) arrow = "→";
 
         ContextualFeedbackManager.Instance.ShowFeedback(arrow, transform.position);
     }

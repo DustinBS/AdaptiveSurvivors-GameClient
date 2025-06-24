@@ -38,9 +38,9 @@ public class KafkaClient : MonoBehaviour
     private CancellationTokenSource consumeCancellationTokenSource;
     private Thread consumerThread;
 
-    // Event for external subscribers to receive adaptive parameters.
-    public delegate void OnAdaptiveParametersReceived(AdaptiveParameters parameters);
-    public static event OnAdaptiveParametersReceived onAdaptiveParametersReceived;
+    // event to pass the message envelope
+    public delegate void OnAdaptiveMessageReceivedDelegate(AdaptiveMessageEnvelope envelope);
+    public static event OnAdaptiveMessageReceivedDelegate OnAdaptiveMessageReceived;
 
     // JSON serialization settings for consistent and compact message formatting.
     private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
@@ -54,46 +54,24 @@ public class KafkaClient : MonoBehaviour
     /// </summary>
     void Awake()
     {
-        // Enforce singleton. Destroy this if another instance exists.
-        if (Instance != null)
-        {
-            Debug.LogWarning("KafkaClient: Duplicate instance found. Destroying this GameObject.");
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
-        // Debug.Log("KafkaClient: Singleton instance assigned.");
 
-        // Cache UnityMainThreadDispatcher for thread-safe main thread access.
         mainThreadDispatcher = FindAnyObjectByType<UnityMainThreadDispatcher>();
         if (mainThreadDispatcher == null)
         {
-            Debug.LogError("KafkaClient: UnityMainThreadDispatcher not found. Kafka messages cannot be processed on the main thread. Ensure it's in the PersistentManagers prefab.");
+            Debug.LogError("KafkaClient: UnityMainThreadDispatcher not found.", this);
             enabled = false;
             return;
         }
-        // Persistence handled by parent PersistentManagers GameObject.
 
         InitializeProducer();
         InitializeConsumer();
     }
 
-    /// <summary>
-    /// Starts the background consumer thread when the object becomes enabled.
-    /// </summary>
-    void OnEnable()
-    {
-        StartConsumerThread();
-    }
+    void OnEnable() { StartConsumerThread(); }
+    void OnDisable() { StopConsumerThread(); CleanUpKafkaClients(); }
 
-    /// <summary>
-    /// Stops the consumer thread and cleans up Kafka clients when the object is disabled or destroyed.
-    /// </summary>
-    void OnDisable()
-    {
-        StopConsumerThread();
-        CleanUpKafkaClients();
-    }
 
     /// <summary>
     /// Initializes the Kafka Producer.
@@ -207,12 +185,21 @@ public class KafkaClient : MonoBehaviour
     {
         try
         {
-            AdaptiveParameters parameters = JsonConvert.DeserializeObject<AdaptiveParameters>(message);
-            onAdaptiveParametersReceived?.Invoke(parameters);
+            // First, deserialize into the generic envelope to find out the message type.
+            AdaptiveMessageEnvelope envelope = JsonConvert.DeserializeObject<AdaptiveMessageEnvelope>(message);
+            if (string.IsNullOrEmpty(envelope.message_type) || string.IsNullOrEmpty(envelope.payload))
+            {
+                Debug.LogWarning($"Consumed message is not a valid envelope: {message}");
+                return;
+            }
+
+            // Invoke the event, passing the whole envelope. Subscribers are responsible
+            // for parsing the specific payload based on the message_type.
+            OnAdaptiveMessageReceived?.Invoke(envelope);
         }
         catch (Exception e)
         {
-            Debug.LogError($"Error deserializing adaptive parameters: {e.Message}\nMessage: {message}");
+            Debug.LogError($"Error deserializing message envelope: {e.Message}\nMessage: {message}");
         }
     }
 
@@ -321,13 +308,42 @@ public class KafkaClient : MonoBehaviour
         public Dictionary<string, object> payload;
     }
 
+    /// <summary>
+    /// The top-level wrapper for all messages on the 'adaptive_params' topic.
+    /// </summary>
     [System.Serializable]
-    public class AdaptiveParameters
+    public class AdaptiveMessageEnvelope
+    {
+        public string message_type;
+        // The payload is a raw JSON string that must be deserialized separately
+        // based on the message_type.
+        public string payload;
+    }
+
+    /// <summary>
+    /// Payload for messages that control the Adaptive Brute's form.
+    /// </summary>
+    [System.Serializable]
+    public class FormAdaptationPayload
     {
         public string playerId;
-        public string adaptation_type; // For the Adaptive Brute
-        public string vexer_predicted_direction; // For the Vector Vexer
-        public Dictionary<string, string> breakableObjectBuffsDebuffs;
-        public long timestamp;
+        public string adaptation_type;
+    }
+
+    /// <summary>
+    /// Payload for messages that provide a prediction for the Vector Vexer.
+    /// </summary>
+    [System.Serializable]
+    public class VexerPredictionPayload
+    {
+        public string playerId;
+        public PredictionVector predicted_direction;
+    }
+
+    [System.Serializable]
+    public class PredictionVector
+    {
+        public float dx;
+        public float dy;
     }
 }
