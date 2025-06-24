@@ -20,6 +20,7 @@ public class EnemyBrain : MonoBehaviour
     // --- Public Properties ---
     public Transform TargetTransform { get; private set; }
     public Rigidbody2D Rigidbody { get; private set; }
+    public Collider2D Collider { get; private set; }
     public EnemyHealth Health { get; private set; }
     public EnemyData Data { get; private set; }
 
@@ -40,7 +41,8 @@ public class EnemyBrain : MonoBehaviour
     private void Awake()
     {
         Rigidbody = GetComponent<Rigidbody2D>();
-        Health = GetComponent<EnemyHealth>(); // Cache reference to required Health component.
+        Collider = GetComponent<Collider2D>();
+        Health = GetComponent<EnemyHealth>();
     }
 
     /// <summary>

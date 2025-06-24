@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: MS_OrbitPlayer_Standard
   m_EditorClassIdentifier: 
   baseSpeed: 3
-  orbitDistance: 8
+  orbitDistance: 1
   orbitSpeedMultiplier: 1
   orbitDirection: 1

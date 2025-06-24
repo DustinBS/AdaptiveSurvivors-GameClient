@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 
 /// <summary>
-/// Manages the Vector Vexer. Uses Kafka data for predictions and executes
-/// the "Vector Shift" teleport ability.
+/// Manages the Vector Vexer. Executes a synchronized "Vector Shift" dash ability
+/// for fodder enemies, matching the player's dash properties.
 /// </summary>
 [RequireComponent(typeof(EnemyBrain))]
 public class VectorVexerController : MonoBehaviour
@@ -17,14 +17,14 @@ public class VectorVexerController : MonoBehaviour
     private float abilityCooldown = 5f;
     [Tooltip("How many consecutive wrong predictions before this enemy despawns.")][SerializeField]
     private int wrongPredictionThreshold = 3;
-    [Tooltip("How far fodder enemies are teleported during the Vector Shift.")][SerializeField]
-    private float teleportDistance = 4f;
     [Tooltip("The radius for checking if two teleported enemies overlap for the 'squish' effect.")][SerializeField]
     private float squishRadius = 0.5f;
 
     // --- Private State ---
     private EnemyBrain enemyBrain;
     private Camera mainCamera;
+    private PlayerMovement playerMovement;
+
     private float lastAbilityTime = -Mathf.Infinity;
     private int consecutiveWrongPredictions = 0;
 
@@ -81,6 +81,12 @@ public class VectorVexerController : MonoBehaviour
     /// </summary>
     private void HandleBrainInitialized()
     {
+        // Get a reference to the PlayerMovement component to read its dash properties.
+        if (enemyBrain.TargetTransform != null)
+        {
+            playerMovement = enemyBrain.TargetTransform.GetComponent<PlayerMovement>();
+        }
+
         lastAbilityTime = -abilityCooldown;
         MakeNewFallbackPrediction();
     }
@@ -90,6 +96,7 @@ public class VectorVexerController : MonoBehaviour
     /// </summary>
     private void OnPlayerDashed(Vector2 actualDashDirection)
     {
+        if (playerMovement == null) return; // Cannot execute ability without player dash stats.
         if (Time.time < lastAbilityTime + abilityCooldown) return;
         lastAbilityTime = Time.time;
 
@@ -102,7 +109,6 @@ public class VectorVexerController : MonoBehaviour
         if (isCorrect) { consecutiveWrongPredictions = 0; }
         else { consecutiveWrongPredictions++; }
 
-        // --- TRIGGER TELEPORT COROUTINE ---
         StartCoroutine(VectorShiftRoutine(predictionToUse));
 
         if (consecutiveWrongPredictions >= wrongPredictionThreshold) { Despawn(); }
@@ -113,35 +119,68 @@ public class VectorVexerController : MonoBehaviour
     /// The main coroutine for the Vector Shift ability.
     /// Finds, moves, and then checks enemies for collision.
     /// </summary>
-    private IEnumerator VectorShiftRoutine(Vector2 teleportDirection)
+    private IEnumerator VectorShiftRoutine(Vector2 dashDirection)
     {
-        // 1. Find all valid targets (not this Vexer, not other elites/bosses)
-        var brainsToTeleport = new List<EnemyBrain>();
-        var allEnemies = FindObjectsOfType<EnemyBrain>();
-        foreach (var enemy in allEnemies)
+        // 1. Find all valid targets
+        var brainsToDash = new List<EnemyBrain>();
+        foreach (var enemy in FindObjectsOfType<EnemyBrain>())
         {
-            // Exclude ourself and any other potential special enemies
             if (enemy != this.enemyBrain && !enemy.Data.enemyID.Contains("elite"))
             {
-                brainsToTeleport.Add(enemy);
+                brainsToDash.Add(enemy);
             }
         }
 
-        if (brainsToTeleport.Count == 0) yield break;
+        if (brainsToDash.Count == 0) yield break;
 
-        // 2. Teleport all enemies simultaneously
-        foreach(var brain in brainsToTeleport)
+        // 2. Pre-calculate all start/end positions
+        var pathInfo = new Dictionary<EnemyBrain, (Vector3 start, Vector3 end)>();
+        float dashDistance = playerMovement.dashSpeed * playerMovement.dashDuration;
+
+        foreach(var brain in brainsToDash)
         {
-            Vector3 targetPosition = brain.transform.position + (Vector3)teleportDirection * teleportDistance;
-            // Use the helper to ensure the position is on screen
-            brain.transform.position = ClampPositionToViewport(targetPosition);
+            Vector3 startPos = brain.transform.position;
+            Vector3 endPos = startPos + (Vector3)dashDirection * dashDistance;
+            pathInfo[brain] = (startPos, ClampPositionToViewport(endPos));
+
+            brain.Collider.enabled = false;
         }
 
-        // Wait a single frame to let physics and transforms update
+        // 4. Perform the synchronized dash over time
+        float elapsedTime = 0f;
+        while (elapsedTime < playerMovement.dashDuration)
+        {
+            float progress = elapsedTime / playerMovement.dashDuration;
+            foreach (var brain in brainsToDash)
+            {
+                // --- DEFENSIVE CHECK ---
+                if (brain == null) continue;
+
+                (Vector3 start, Vector3 end) path = pathInfo[brain];
+                brain.transform.position = Vector3.Lerp(path.start, path.end, progress);
+            }
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // 5. Finalize positions and re-enable colliders
+        foreach (var brain in brainsToDash)
+        {
+            // --- DEFENSIVE CHECK ---
+            if (brain == null) continue;
+
+            brain.transform.position = pathInfo[brain].end;
+            brain.Collider.enabled = true;
+        }
+
+        // --- Clean the list of any null references before the final step ---
+        brainsToDash.RemoveAll(item => item == null);
+
+        // Wait a single frame for the physics engine to detect new overlaps
         yield return null;
 
-        // 3. Handle the "Congestion Effect" for any overlapping enemies
-        HandleCongestionEffect(brainsToTeleport);
+        // 6. Handle the "Congestion Effect" with the cleaned list
+        HandleCongestionEffect(brainsToDash);
     }
 
     /// <summary>

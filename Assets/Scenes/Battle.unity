@@ -795,7 +795,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fodderEnemies:
   - {fileID: 11400000, guid: 753dc9e2209bc78458abd57db4a503bc, type: 2}
-  eliteEnemies:
+  eliteEnemies: []
+  uniqueEliteData:
   - {fileID: 11400000, guid: ee2768f2008371844b77552437ea2bbd, type: 2}
   spawnInterval: 2
   maxEnemiesOnScreen: 20
