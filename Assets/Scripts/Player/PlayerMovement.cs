@@ -2,28 +2,47 @@
 
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Collections.Generic; // For Dictionary
+using System.Collections; // Required for Coroutines
+using System.Collections.Generic;
+using System; // Required for Action delegate
 
-// This script handles player movement based on the new Input System and sends movement events to Kafka.
-// It assumes the player has a Rigidbody2D component for physics-based movement.
+/// <summary>
+/// Handles player movement and the new dash ability based on the Input System.
+/// Sends movement events to Kafka and invokes an event on dash.
+/// </summary>
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Base Movement")]
     private float moveSpeed;
     private string playerId;
-    private const float BASE_MOVE_SPEED = 5f; // Keep a base speed constant
+    private const float BASE_MOVE_SPEED = 5f;
 
-    private KafkaClient kafkaClient;
-    private Rigidbody2D rb;
-    private PlayerControls playerControls;
-    private Vector2 currentMovementInput;
-    private Vector2 lastSentPosition;
-    private Vector2 lastSentDirection;
+    [Header("Dash Ability")]
+    [Tooltip("The high speed applied during the dash.")][SerializeField] public float dashSpeed = 25f;
+    [Tooltip("The duration of the dash in seconds.")][SerializeField] public float dashDuration = 0.15f;
+    [Tooltip("The cooldown of the dash in seconds.")][SerializeField] public float dashCooldown = 2f;
 
     [Header("Kafka Settings")]
     [Tooltip("Minimum distance change before sending a new movement event.")]
     [SerializeField] private float positionEventThreshold = 0.1f;
     [Tooltip("Minimum direction change before sending a new movement event.")]
     [SerializeField] private float directionEventThreshold = 0.05f;
+
+    // --- Public Events ---
+    /// <summary>
+    /// Fired when the player executes a dash. The payload is the direction of the dash.
+    /// </summary>
+    public static event Action<Vector2> OnPlayerDashed;
+
+    // --- Private State ---
+    private KafkaClient kafkaClient;
+    private Rigidbody2D rb;
+    private PlayerControls playerControls;
+    private Vector2 currentMovementInput;
+    private Vector2 lastSentPosition;
+    private Vector2 lastSentDirection;
+    private bool isDashing = false;
+    private float lastDashTime = -Mathf.Infinity; // Initialize to allow first dash immediately
 
     // The Initialize method, called by PlayerInitializer
     public void Initialize(CharacterData data)
@@ -39,13 +58,18 @@ public class PlayerMovement : MonoBehaviour
         playerControls = PlayerInputManager.Instance.PlayerControls;
         lastSentPosition = transform.position;
         lastSentDirection = Vector2.zero;
+
+        // Initialize lastDashTime to allow a dash right away
+        lastDashTime = -dashCooldown;
     }
 
     void OnEnable()
     {
-        // Subscribe to the Move action's performed and canceled events
+        // Subscribe to standard movement actions
         playerControls.Player.Move.performed += OnMovePerformed;
         playerControls.Player.Move.canceled += OnMoveCanceled;
+        // Subscribe to the new Dash action
+        playerControls.Player.Dash.performed += OnDashPerformed;
     }
 
     void OnDisable()
@@ -53,6 +77,7 @@ public class PlayerMovement : MonoBehaviour
         // Unsubscribe to prevent memory leaks
         playerControls.Player.Move.performed -= OnMovePerformed;
         playerControls.Player.Move.canceled -= OnMoveCanceled;
+        playerControls.Player.Dash.performed -= OnDashPerformed;
     }
 
     /// <summary>
@@ -80,8 +105,47 @@ public class PlayerMovement : MonoBehaviour
         currentMovementInput = Vector2.zero;
     }
 
+    private void OnDashPerformed(InputAction.CallbackContext context)
+    {
+        // Check if dashing is allowed (not already dashing and not on cooldown)
+        if (!isDashing && Time.time >= lastDashTime + dashCooldown)
+        {
+            StartCoroutine(DashRoutine());
+        }
+    }
+
+    private IEnumerator DashRoutine()
+    {
+        isDashing = true;
+        lastDashTime = Time.time;
+
+        // Determine dash direction based on current movement input
+        Vector2 dashDirection = currentMovementInput.normalized;
+        // Fallback: If not moving, dash forward (up)
+        if (dashDirection == Vector2.zero)
+        {
+            dashDirection = Vector2.up;
+        }
+
+        // Invoke the event for other systems to listen to
+        OnPlayerDashed?.Invoke(dashDirection);
+
+        // Apply dash force
+        rb.linearVelocity = dashDirection * dashSpeed;
+
+        // Wait for the dash duration
+        yield return new WaitForSeconds(dashDuration);
+
+        // End the dash
+        rb.linearVelocity = Vector2.zero; // Stop the player abruptly after the dash
+        isDashing = false;
+    }
+
     void FixedUpdate()
     {
+        // Prevent standard movement while dashing
+        if (isDashing) return;
+
         Vector2 movement = currentMovementInput.normalized;
         rb.linearVelocity = movement * moveSpeed;
         SendPlayerMovementEvent(movement);
