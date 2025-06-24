@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyID: elite_adaptive_brute
   enemyName: AdaptiveBrute
-  maxHealth: 25
+  maxHealth: 75
   xpValue: 100
   movementStrategy: {fileID: 11400000, guid: 4c982349182111142b11d884a77a9624, type: 2}
   attackStrategy: {fileID: 11400000, guid: e6f78d19d91245a4eb1fd119120600dc, type: 2}
