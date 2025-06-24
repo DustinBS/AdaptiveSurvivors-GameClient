@@ -1,13 +1,13 @@
 // GameClient/Assets/Scripts/Enemy/AI/VectorVexerController.cs
 
 using UnityEngine;
-using System.Collections.Generic; // Required for List
+using System.Collections;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 /// <summary>
-/// Manages the unique behavior of the Vector Vexer elite enemy.
-/// Listens for player dashes and triggers its "Vector Shift" ability.
-/// random prediction as an offline fallback
+/// Manages the Vector Vexer. Uses Kafka data for predictions and executes
+/// the "Vector Shift" teleport ability.
 /// </summary>
 [RequireComponent(typeof(EnemyBrain))]
 public class VectorVexerController : MonoBehaviour
@@ -17,16 +17,19 @@ public class VectorVexerController : MonoBehaviour
     private float abilityCooldown = 5f;
     [Tooltip("How many consecutive wrong predictions before this enemy despawns.")][SerializeField]
     private int wrongPredictionThreshold = 3;
+    [Tooltip("How far fodder enemies are teleported during the Vector Shift.")][SerializeField]
+    private float teleportDistance = 4f;
+    [Tooltip("The radius for checking if two teleported enemies overlap for the 'squish' effect.")][SerializeField]
+    private float squishRadius = 0.5f;
 
     // --- Private State ---
     private EnemyBrain enemyBrain;
+    private Camera mainCamera;
     private float lastAbilityTime = -Mathf.Infinity;
     private int consecutiveWrongPredictions = 0;
 
     // --- Prediction Logic ---
-    // Used for the OFFLINE FALLBACK.
     private Vector2 randomFallbackPrediction;
-    // Used for ONLINE mode. Nullable so we know if we've ever received a message.
     private Vector2? lastKafkaPrediction = null;
 
     private readonly List<Vector2> cardinalDirections = new List<Vector2>
@@ -37,6 +40,7 @@ public class VectorVexerController : MonoBehaviour
     void Awake()
     {
         enemyBrain = GetComponent<EnemyBrain>();
+        mainCamera = Camera.main; // Cache the main camera reference
     }
 
     void OnEnable()
@@ -48,10 +52,7 @@ public class VectorVexerController : MonoBehaviour
 
     void OnDisable()
     {
-        if (enemyBrain != null)
-        {
-            enemyBrain.OnInitialized -= HandleBrainInitialized;
-        }
+        if (enemyBrain != null) { enemyBrain.OnInitialized -= HandleBrainInitialized; }
         PlayerMovement.OnPlayerDashed -= OnPlayerDashed;
         KafkaClient.OnAdaptiveMessageReceived -= OnAdaptiveMessageReceived;
     }
@@ -92,17 +93,7 @@ public class VectorVexerController : MonoBehaviour
         if (Time.time < lastAbilityTime + abilityCooldown) return;
         lastAbilityTime = Time.time;
 
-        // --- OFFLINE/ONLINE LOGIC ---
-        // Decide which prediction to use based on whether we've received data from Kafka.
-        Vector2 predictionToUse;
-        if (lastKafkaPrediction.HasValue)
-        {
-            predictionToUse = lastKafkaPrediction.Value; // ONLINE: Use Kafka data
-        }
-        else
-        {
-            predictionToUse = randomFallbackPrediction; // OFFLINE: Use random fallback
-        }
+        Vector2 predictionToUse = lastKafkaPrediction.HasValue ? lastKafkaPrediction.Value : randomFallbackPrediction;
 
         ShowPredictionFeedback(predictionToUse);
 
@@ -111,18 +102,98 @@ public class VectorVexerController : MonoBehaviour
         if (isCorrect) { consecutiveWrongPredictions = 0; }
         else { consecutiveWrongPredictions++; }
 
-        Debug.Log($"Vexer used Vector Shift. Predicted: {predictionToUse}, Correct: {isCorrect}");
+        // --- TRIGGER TELEPORT COROUTINE ---
+        StartCoroutine(VectorShiftRoutine(predictionToUse));
 
-        if (consecutiveWrongPredictions >= wrongPredictionThreshold)
+        if (consecutiveWrongPredictions >= wrongPredictionThreshold) { Despawn(); }
+        else { MakeNewFallbackPrediction(); }
+    }
+
+    /// <summary>
+    /// The main coroutine for the Vector Shift ability.
+    /// Finds, moves, and then checks enemies for collision.
+    /// </summary>
+    private IEnumerator VectorShiftRoutine(Vector2 teleportDirection)
+    {
+        // 1. Find all valid targets (not this Vexer, not other elites/bosses)
+        var brainsToTeleport = new List<EnemyBrain>();
+        var allEnemies = FindObjectsOfType<EnemyBrain>();
+        foreach (var enemy in allEnemies)
         {
-            Despawn();
+            // Exclude ourself and any other potential special enemies
+            if (enemy != this.enemyBrain && !enemy.Data.enemyID.Contains("elite"))
+            {
+                brainsToTeleport.Add(enemy);
+            }
         }
-        else
+
+        if (brainsToTeleport.Count == 0) yield break;
+
+        // 2. Teleport all enemies simultaneously
+        foreach(var brain in brainsToTeleport)
         {
-            // Always generate a new random prediction in case Kafka connection is lost.
-            MakeNewFallbackPrediction();
+            Vector3 targetPosition = brain.transform.position + (Vector3)teleportDirection * teleportDistance;
+            // Use the helper to ensure the position is on screen
+            brain.transform.position = ClampPositionToViewport(targetPosition);
+        }
+
+        // Wait a single frame to let physics and transforms update
+        yield return null;
+
+        // 3. Handle the "Congestion Effect" for any overlapping enemies
+        HandleCongestionEffect(brainsToTeleport);
+    }
+
+    /// <summary>
+    /// Checks for overlaps between teleported enemies and destroys them.
+    /// </summary>
+    private void HandleCongestionEffect(List<EnemyBrain> teleportedEnemies)
+    {
+        // Use a HashSet for efficient tracking of which enemies to destroy
+        HashSet<EnemyBrain> squishedEnemies = new HashSet<EnemyBrain>();
+
+        for (int i = 0; i < teleportedEnemies.Count; i++)
+        {
+            for (int j = i + 1; j < teleportedEnemies.Count; j++)
+            {
+                // Skip checks if one has already been marked for destruction
+                if (squishedEnemies.Contains(teleportedEnemies[i]) || squishedEnemies.Contains(teleportedEnemies[j])) continue;
+
+                float distance = Vector3.Distance(teleportedEnemies[i].transform.position, teleportedEnemies[j].transform.position);
+                if (distance < squishRadius)
+                {
+                    squishedEnemies.Add(teleportedEnemies[i]);
+                    squishedEnemies.Add(teleportedEnemies[j]);
+                }
+            }
+        }
+
+        // Destroy all marked enemies, awarding XP via the TakeDamage flow
+        foreach (var enemy in squishedEnemies)
+        {
+            if (enemy != null && enemy.Health != null)
+            {
+                // Reuses existing death logic to grant XP, etc.
+                enemy.Health.TakeDamage(enemy.Health.maxHealth, "vexer_squish", false);
+            }
         }
     }
+
+    /// <summary>
+    /// A helper function to clamp a world position to the camera's viewport.
+    /// </summary>
+    private Vector3 ClampPositionToViewport(Vector3 worldPosition)
+    {
+        if (mainCamera == null) return worldPosition;
+
+        Vector3 viewportPos = mainCamera.WorldToViewportPoint(worldPosition);
+        // Use a small margin to ensure enemies are fully on-screen
+        viewportPos.x = Mathf.Clamp(viewportPos.x, 0.05f, 0.95f);
+        viewportPos.y = Mathf.Clamp(viewportPos.y, 0.05f, 0.95f);
+
+        return mainCamera.ViewportToWorldPoint(viewportPos);
+    }
+
 
     /// <summary>
     /// Generates a new random prediction for the offline fallback.
