@@ -42,6 +42,7 @@ public class AdaptiveEnemy : MonoBehaviour
 
             if (formController != null)
             {
+                Debug.Log($"Received {envelope.message_type} with adaptation {payload.adaptation_type}");
                 bool adaptToMelee = payload.adaptation_type == "juggernaut";
                 formController.ApplyAdaptationFromMessage(adaptToMelee);
             }

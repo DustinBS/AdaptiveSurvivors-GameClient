@@ -63,6 +63,7 @@ public class VectorVexerController : MonoBehaviour
     private void OnAdaptiveMessageReceived(KafkaClient.AdaptiveMessageEnvelope envelope)
     {
         if (envelope.message_type != "vexer_prediction_update") return;
+        Debug.Log($"Vexer received envelope {envelope.message_type}");
 
         try
         {
