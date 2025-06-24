@@ -21,6 +21,7 @@ public class EnemyBrain : MonoBehaviour
     public Transform TargetTransform { get; private set; }
     public Rigidbody2D Rigidbody { get; private set; }
     public EnemyHealth Health { get; private set; }
+    public EnemyData Data { get; private set; }
 
     // --- Runtime Stats ---
     public float MoveSpeed { get; private set; }
@@ -64,6 +65,7 @@ public class EnemyBrain : MonoBehaviour
         this.TargetTransform = target;
         this.movementStrategy = enemyData.movementStrategy;
         this.attackStrategy = enemyData.attackStrategy;
+        this.Data = enemyData;
 
         // --- Stat Initialization ---
         this.baseMoveSpeed = movementStrategy.baseSpeed;

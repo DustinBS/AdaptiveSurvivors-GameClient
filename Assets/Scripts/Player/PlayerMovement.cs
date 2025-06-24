@@ -119,26 +119,36 @@ public class PlayerMovement : MonoBehaviour
         isDashing = true;
         lastDashTime = Time.time;
 
-        // Determine dash direction based on current movement input
         Vector2 dashDirection = currentMovementInput.normalized;
-        // Fallback: If not moving, dash forward (up)
         if (dashDirection == Vector2.zero)
         {
             dashDirection = Vector2.up;
         }
 
-        // Invoke the event for other systems to listen to
+        // The local event can remain for client-side effects (e.g., sound, particles)
         OnPlayerDashed?.Invoke(dashDirection);
+
+        SendDashEvent(dashDirection);
 
         // Apply dash force
         rb.linearVelocity = dashDirection * dashSpeed;
 
-        // Wait for the dash duration
         yield return new WaitForSeconds(dashDuration);
 
-        // End the dash
-        rb.linearVelocity = Vector2.zero; // Stop the player abruptly after the dash
+        rb.linearVelocity = Vector2.zero;
         isDashing = false;
+    }
+
+    private void SendDashEvent(Vector2 dashDirection)
+    {
+        if (kafkaClient == null) return;
+
+        var payload = new Dictionary<string, object>
+        {
+            { "dash_direction", new Dictionary<string, float> { { "dx", dashDirection.x }, { "dy", dashDirection.y } } }
+        };
+
+        kafkaClient.SendGameplayEvent("player_dash_event", playerId, payload);
     }
 
     void FixedUpdate()

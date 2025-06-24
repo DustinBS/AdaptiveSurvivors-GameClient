@@ -10,11 +10,17 @@ using System.Linq;
 /// </summary>
 public class EnemySpawner : MonoBehaviour
 {
+    public static EnemySpawner Instance { get; private set; }
+
     [Header("Spawner Configuration")]
     [Tooltip("List of regular 'fodder' enemy types this spawner can instantiate.")]
     public List<EnemyData> fodderEnemies;
     [Tooltip("List of 'elite' enemy types this spawner can instantiate.")]
     public List<EnemyData> eliteEnemies;
+
+    [Header("Unique Elites (Limit 1)")]
+    [Tooltip("A list of elite types that should only have one instance active at a time.")]
+    public List<EnemyData> uniqueEliteData;
 
     [Header("Spawn Timings & Limits")]
     [Tooltip("The interval (in seconds) between spawn attempts.")]
@@ -37,9 +43,23 @@ public class EnemySpawner : MonoBehaviour
 
     private float spawnTimer;
     private Transform playerTransform;
+    private List<EnemyData> runtimeElitePool;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
+    }
 
     private void Start()
     {
+        // Find player
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
@@ -49,6 +69,26 @@ public class EnemySpawner : MonoBehaviour
         {
             Debug.LogError("EnemySpawner: Player GameObject not found. Spawner disabled.", this);
             enabled = false;
+            return;
+        }
+
+        // Initialize the runtime pool with all configured elites.
+        runtimeElitePool = new List<EnemyData>(eliteEnemies);
+        // Also add the unique elites to the initial pool.
+        runtimeElitePool.AddRange(uniqueEliteData);
+    }
+
+    /// <summary>
+    /// Called by a unique enemy when it is defeated or despawns,
+    /// adding it back to the available spawn pool.
+    /// </summary>
+    public void OnUniqueEnemyDefeated(EnemyData defeatedEnemyData)
+    {
+        // If the enemy is in the configured unique list and not already in the pool, add it back.
+        if (uniqueEliteData.Contains(defeatedEnemyData) && !runtimeElitePool.Contains(defeatedEnemyData))
+        {
+            runtimeElitePool.Add(defeatedEnemyData);
+            Debug.Log($"Added '{defeatedEnemyData.name}' back to the elite spawn pool.");
         }
     }
 
@@ -101,6 +141,11 @@ public class EnemySpawner : MonoBehaviour
             Debug.LogError($"EnemyData '{enemyData.name}' has no visual prefab assigned.", enemyData);
             return;
         }
+        if (uniqueEliteData.Contains(enemyData))
+        {
+            runtimeElitePool.Remove(enemyData);
+            Debug.Log($"Spawning unique elite '{enemyData.name}' and removing it from the pool.");
+        }
 
         Vector3 spawnPosition = GetRandomSpawnPosition();
         GameObject enemyInstance = Instantiate(enemyData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
@@ -119,14 +164,16 @@ public class EnemySpawner : MonoBehaviour
 
     private EnemyData ChooseEnemyType()
     {
-        bool canSpawnElite = eliteEnemies.Any() &&
+        // Use the runtimeElitePool, which only contains currently available elites.
+        bool canSpawnElite = runtimeElitePool.Any() &&
                              GameManager.Instance != null &&
                              GameManager.Instance.currentWave >= eliteStartWave &&
                              Random.value < eliteSpawnChance;
 
         if (canSpawnElite)
         {
-            return eliteEnemies[Random.Range(0, eliteEnemies.Count)];
+            // picks from the pool of available elites
+            return runtimeElitePool[Random.Range(0, runtimeElitePool.Count)];
         }
 
         // Default to spawning a fodder enemy if available.

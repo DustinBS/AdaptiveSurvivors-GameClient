@@ -325,8 +325,9 @@ public class KafkaClient : MonoBehaviour
     public class AdaptiveParameters
     {
         public string playerId;
-        public string adaptation_type;
-        public Dictionary<string, string> breakableObjectBuffsDebuffs; // not implemented yet
+        public string adaptation_type; // For the Adaptive Brute
+        public string vexer_predicted_direction; // For the Vector Vexer
+        public Dictionary<string, string> breakableObjectBuffsDebuffs;
         public long timestamp;
     }
 }

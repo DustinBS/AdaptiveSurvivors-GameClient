@@ -7,7 +7,7 @@ using UnityEngine;
 /// This strategy holds the damage value, but the trigger logic (OnCollisionEnter2D)
 /// will reside in the EnemyBrain for a more robust implementation.
 /// </summary>
-[CreateAssetMenu(fileName = "ContactAttackStrategy", menuName = "Adaptive Survivors/AI/Attack/Contact Attack")]
+[CreateAssetMenu(fileName = "ContactAttackStrategy", menuName = "Adaptive Survivors/AI Strategies/Attack/Contact Attack")]
 public class ContactAttackStrategy : AttackStrategy
 {
     /// <summary>

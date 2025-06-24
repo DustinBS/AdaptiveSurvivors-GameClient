@@ -6,7 +6,7 @@ using UnityEngine;
 /// A concrete MovementStrategy where the enemy moves directly towards its target.
 /// The logic is adapted from the original EnemyMovement.cs.
 /// </summary>
-[CreateAssetMenu(fileName = "DirectChaseStrategy", menuName = "Adaptive Survivors/AI/Movement/Direct Chase")]
+[CreateAssetMenu(fileName = "DirectChaseStrategy", menuName = "Adaptive Survivors/AI Strategies/Movement/Direct Chase")]
 public class DirectChaseStrategy : MovementStrategy
 {
     /// <summary>

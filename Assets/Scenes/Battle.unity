@@ -164,6 +164,53 @@ Transform:
   m_Children: []
   m_Father: {fileID: 246534944}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &140641319
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 140641320}
+  - component: {fileID: 140641321}
+  m_Layer: 0
+  m_Name: _ContextualFeedbackManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &140641320
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 140641319}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -306.00357, y: -170.59515, z: 3.3785732}
+  m_LocalScale: {x: 1.2543784, y: 1.2543784, z: 1.2543784}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1707920888}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &140641321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 140641319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41a05a4e2c5d55142ba9880afb81449d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  feedbackTextPrefab: {fileID: 5911104598664017561, guid: a9e801d13ca84c44d96b3844edcd59af, type: 3}
+  poolSize: 10
+  canvasTransform: {fileID: 1707920888}
 --- !u!1 &246534943
 GameObject:
   m_ObjectHideFlags: 0
@@ -749,13 +796,13 @@ MonoBehaviour:
   fodderEnemies:
   - {fileID: 11400000, guid: 753dc9e2209bc78458abd57db4a503bc, type: 2}
   eliteEnemies:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: ee2768f2008371844b77552437ea2bbd, type: 2}
   spawnInterval: 2
   maxEnemiesOnScreen: 20
   spawnRadius: 10
   minSpawnDistanceFromPlayer: 5
-  eliteStartWave: 3
-  eliteSpawnChance: 0.1
+  eliteStartWave: 2
+  eliteSpawnChance: 0.5
 --- !u!4 &1209082160
 Transform:
   m_ObjectHideFlags: 0
@@ -938,6 +985,7 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 140641320}
   - {fileID: 1039054445}
   m_Father: {fileID: 1106351071}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

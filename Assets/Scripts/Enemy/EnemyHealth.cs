@@ -15,9 +15,9 @@ public class EnemyHealth : MonoBehaviour
     [Header("Runtime Enemy Stats")]
     public string EnemyId { get; private set; }
     public string EnemyType { get; private set; }
-    public float currentHealth;
-    public float maxHealth;
-    public float xpValue;
+    [HideInInspector] public float currentHealth;
+    [HideInInspector] public float maxHealth;
+    [HideInInspector] public float xpValue;
     private Rigidbody2D rb;
 
     // --- Static Events ---
