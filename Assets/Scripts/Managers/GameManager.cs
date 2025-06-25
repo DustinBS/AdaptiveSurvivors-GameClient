@@ -2,6 +2,7 @@
 
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
 /// A scene-specific manager that controls the overall game state, including wave progression,
@@ -30,6 +31,10 @@ public class GameManager : MonoBehaviour
     [Tooltip("Reference to the scene's EnemySpawner component.")]
     [SerializeField] private EnemySpawner enemySpawner;
 
+    // to update historical stats.
+    [Header("Data References")]
+    [SerializeField] private PlayerData playerData;
+
     void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
@@ -40,6 +45,9 @@ public class GameManager : MonoBehaviour
         {
             enemySpawner = FindFirstObjectByType<EnemySpawner>();
         }
+        // Reset all run-specific trackers at the start of a new run.
+        StatisticsTracker.Reset();
+        RunSummaryService.ClearSummary();
     }
 
     void OnEnable()
@@ -77,8 +85,46 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void HandlePlayerDeath()
     {
+        if (CurrentState == GameState.GameOver) return;
+
         CurrentState = GameState.GameOver;
+        ProcessEndOfRunStatistics();
         StartCoroutine(ShowDeathMenuAfterDelay(1.5f));
+    }
+
+    /// <summary>
+    /// Gathers run stats, stores them for cross-scene access, and updates persistent historical data.
+    /// </summary>
+    private void ProcessEndOfRunStatistics()
+    {
+        if (playerData == null)
+        {
+            Debug.LogError("PlayerData reference is not set in GameManager. Cannot save historical stats.", this);
+            return;
+        }
+
+        // 1. Get the summary of the completed run from our tracker.
+        Dictionary<string, object> runSummary = StatisticsTracker.GenerateRunSummary();
+
+        // 2. Add any stats that are only tracked by GameManager itself.
+        runSummary["time_survived_seconds"] = (int)timeElapsed;
+
+        // 3. Store this summary in the transient service for the hub scene to access.
+        RunSummaryService.SetRunSummary(runSummary);
+        Debug.Log("Run summary stored in RunSummaryService.");
+
+        // 4. Update the persistent historical stats in PlayerData.
+        // This pattern ensures historical data is always in sync with completed runs.
+        foreach (var stat in runSummary)
+        {
+            string historicalKey = $"total_{stat.Key}";
+            // Ensure we only try to add numerical values.
+            if (stat.Value is int || stat.Value is long || stat.Value is float)
+            {
+                playerData.IncrementHistoricalStat(historicalKey, System.Convert.ToInt64(stat.Value));
+            }
+        }
+        Debug.Log("Historical stats in PlayerData have been updated.");
     }
 
     // A small delay makes the transition feel less abrupt.

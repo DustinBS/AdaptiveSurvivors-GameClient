@@ -1,6 +1,7 @@
 // GameClient/Assets/Scripts/Data/PlayerData.cs
 
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// A ScriptableObject that holds the player's dynamic data for a single game run.
@@ -21,9 +22,10 @@ public class PlayerData : ScriptableObject
     [Tooltip("The player's current damage during a run. This can be modified by upgrades.")]
     public float currentDamage;
 
-    // Note: The original playerName and playerPortrait fields have been removed.
-    // That information should now be accessed through the 'characterData' reference
-    // to keep a single source of truth (e.g., PlayerData.characterData.characterName).
+    // A dictionary to hold historical (lifetime) statistics.
+    [Header("Historical Stats")]
+    [Tooltip("Persistent, lifetime statistics for this player profile.")]
+    public Dictionary<string, long> historicalStats = new Dictionary<string, long>();
 
     /// <summary>
     /// Initializes the player's stats for the start of a new run based on the selected character.
@@ -50,4 +52,20 @@ public class PlayerData : ScriptableObject
 
         Debug.Log($"PlayerData initialized for new run with character: '{characterData.characterName}'. Base Health: {currentHealth}, Base Damage: {currentDamage}");
     }
+
+    /// <summary>
+    /// Increments a historical statistic by a given amount.
+    /// This should be called by GameManager at the end of a run.
+    /// </summary>
+    /// <param name="statKey">The key of the stat (e.g., "total_enemies_killed").</param>
+    /// <param name="amount">The amount to add.</param>
+    public void IncrementHistoricalStat(string statKey, long amount)
+    {
+        if (!historicalStats.ContainsKey(statKey))
+        {
+            historicalStats[statKey] = 0;
+        }
+        historicalStats[statKey] += amount;
+    }
+
 }

@@ -95,6 +95,8 @@ public class PlayerExperience : MonoBehaviour
 
         Debug.Log($"LEVEL UP! Player is now Level {currentLevel}.");
 
+        StatisticsTracker.RecordFinalLevel(currentLevel);
+
         OnLevelUp?.Invoke(currentLevel);
         OnXPChanged?.Invoke(currentXP, xpToNextLevel);
     }

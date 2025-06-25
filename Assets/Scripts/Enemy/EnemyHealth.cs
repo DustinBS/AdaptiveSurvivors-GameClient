@@ -74,6 +74,8 @@ public class EnemyHealth : MonoBehaviour
 
     private void Die(string killingWeaponId)
     {
+        StatisticsTracker.RecordEnemyKilled(this.EnemyType);
+
         OnEnemyDeath?.Invoke(EnemyId, EnemyType, xpValue);
         SendEnemyDeathEvent(killingWeaponId);
         enabled = false;

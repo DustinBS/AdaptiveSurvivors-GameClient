@@ -1,11 +1,14 @@
 // GameClient/Assets/Scripts/Managers/DialogueManager.cs
 
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.Networking;
 using System.Collections;
+using System.Text;
 using UnityEngine.InputSystem;
-using System.Collections.Generic; // Added for List<T>
+using System.Collections.Generic;
 using UnityEngine.SceneManagement;
+using Newtonsoft.Json;
+using System.Linq;
 
 /// <summary>
 /// A stateful singleton manager that controls the interactive dialogue system.
@@ -13,20 +16,27 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
+    // Inner class for structuring the JSON payload to the cloud function.
+    [System.Serializable]
+    private class LLMRequestPayload
+    {
+        public string npc_personality;
+        public KeyValuePair<string, object> statistic_to_comment_on;
+    }
+
     public static DialogueManager Instance { get; private set; }
 
-    // Defines the possible states of the dialogue system.
     private enum DialogueState
     {
-        Inactive,           // Not in a conversation.
-        DisplayingLine,     // Typewriter effect is running.
-        LineFinished,       // Line is fully displayed, waiting for input to continue.
-        AwaitingChoice,     // Player choice buttons are visible.
-        Ending              // Conversation is wrapping up.
+        Inactive,
+        DisplayingLine,
+        LineFinished,
+        AwaitingChoice,
+        Ending,
+        AwaitingLLM
     }
 
     [Header("Component References")]
-    // registered at runtime
     private DialogueUIController uiController;
     [SerializeField] private PlayerData playerData;
 
@@ -37,18 +47,18 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private float typewriterSpeed = 30f;
 
     [Header("LLM Settings")]
-    [SerializeField] private bool useDebugMode = true;
+    [Tooltip("The full URL of the cloud function for post-run commentary.")]
     [SerializeField] private string cloudFunctionUrl;
     [SerializeField] private Sprite defaultPortrait;
     [Tooltip("A pool of phrases to display randomly while waiting for an LLM response.")]
-    [SerializeField] private List<string> llmThinkingPhrases = new List<string> { "Hmm...", "Let me think...", "Just a moment.", "..." };
-
+    [SerializeField] private List<string> llmThinkingPhrases = new List<string> { "Hmm...", "Let me think...", "The ether speaks...", "Reading the echoes..." };
+    [Tooltip("The probability (0-1) of an NPC commenting on a historical stat instead of the last run.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float historicalStatChance = 0.2f;
 
     // --- State Management ---
-    private string _currentLineFullText; // Caches the full text of the line currently being displayed.
-
-    private bool isWaitingForLLM = false; // Flag to track if we're in the LLM waiting state.
-    private List<string> currentThinkingPhrases; // The temporary pool of phrases for the current request.
+    private string _currentLineFullText;
+    private List<string> currentThinkingPhrases;
 
     private DialogueState currentState;
     private DialogueData currentConversation;
@@ -56,7 +66,7 @@ public class DialogueManager : MonoBehaviour
     private int currentLineIndex;
     private Coroutine typewriterCoroutine;
     private PlayerControls playerControls;
-    private bool acceptInput = true; // NEW: Flag to control input processing
+    private bool acceptInput = true;
 
     void Awake()
     {
@@ -68,10 +78,8 @@ public class DialogueManager : MonoBehaviour
 
     void Start()
     {
-        // 1. Safely get the controls instance.
         playerControls = PlayerInputManager.Instance.PlayerControls;
 
-        // 2. Immediately subscribe to the necessary events.
         if (playerControls != null)
         {
             playerControls.UI.Submit.performed += OnSubmitPerformed;
@@ -89,24 +97,19 @@ public class DialogueManager : MonoBehaviour
 
     void OnDisable()
     {
-        // Unsubscribe from both sceneLoaded and player input to prevent memory leaks.
         SceneManager.sceneLoaded -= OnSceneLoaded;
         if (playerControls != null)
         {
             playerControls.UI.Submit.performed -= OnSubmitPerformed;
         }
     }
-
-    // This method runs every time a new scene is loaded.
-    // It mirrors the logic from PlayerInteraction.cs script.
+    
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Find the UI controller in the newly loaded scene.
         uiController = FindObjectOfType<DialogueUIController>();
 
         if (uiController != null)
         {
-            // If we found one, subscribe to its event.
             uiController.OnChoiceSelected += OnPlayerResponseClicked;
         }
     }
@@ -120,7 +123,7 @@ public class DialogueManager : MonoBehaviour
         currentConversation = dialogue;
         currentNpc = npc;
         currentLineIndex = -1;
-        acceptInput = true; // Ensure input is accepted at the start
+        acceptInput = true;
 
         uiController.UpdatePortraits(playerData.characterData.characterPortrait, npc.NPCPortrait ?? defaultPortrait);
         uiController.ShowDialogue(true);
@@ -135,20 +138,14 @@ public class DialogueManager : MonoBehaviour
         switch (currentState)
         {
             case DialogueState.DisplayingLine:
-                // If we are waiting for the LLM, show the next thinking phrase.
-                if (isWaitingForLLM)
-                {
-                    DisplayNextThinkingPhrase();
-                }
-                // Otherwise, perform the normal line skip.
-                else
-                {
-                    FinishLine();
-                    StartCoroutine(InputCooldown(true));
-                }
+                FinishLine();
+                StartCoroutine(InputCooldown(true));
                 break;
             case DialogueState.LineFinished:
                 AdvanceConversation();
+                break;
+            case DialogueState.AwaitingLLM:
+                DisplayNextThinkingPhrase();
                 break;
         }
     }
@@ -178,17 +175,19 @@ public class DialogueManager : MonoBehaviour
             speakerName = currentNpc.NPCName;
         }
 
-        _currentLineFullText = line.text;
-
         uiController.HideChoices();
         if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
 
-        if (line.isLLMGenerated)
+        bool canCommentOnRun = RunSummaryService.IsNewSummaryAvailable;
+        bool canCommentOnHistory = playerData != null && playerData.historicalStats.Count > 0;
+
+        if (line.isLLMGenerated && (canCommentOnRun || canCommentOnHistory))
         {
             typewriterCoroutine = StartCoroutine(RequestLLMCommentary(line, speakerName));
         }
         else
         {
+            _currentLineFullText = line.isLLMGenerated ? "(They look at you, but have nothing to say.)" : line.text;
             typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
         }
     }
@@ -253,9 +252,8 @@ public class DialogueManager : MonoBehaviour
         uiController.SetDialogueLine(speakerName, "");
 
         string currentText = "";
-        // MODIFIED: Use the typewriterSpeed variable for character delay calculation
         float charDelay = 1f / typewriterSpeed;
-        if (charDelay <= 0) charDelay = 0.001f; // Prevent division by zero
+        if (charDelay <= 0) charDelay = 0.001f;
 
         foreach (char letter in text.ToCharArray())
         {
@@ -267,93 +265,103 @@ public class DialogueManager : MonoBehaviour
 
         if (currentState != DialogueState.Ending)
         {
-           // The line finished displaying naturally.
            ShowPlayerResponses(currentConversation.lines[currentLineIndex]);
-           // MODIFIED: Start the cooldown to prevent accidental skipping.
            StartCoroutine(InputCooldown(false));
         }
     }
 
     private IEnumerator RequestLLMCommentary(DialogueLine line, string speakerName)
     {
-        currentState = DialogueState.DisplayingLine;
-        isWaitingForLLM = true; // Set the flag
-        uiController.ShowContinuePrompt(false);
+        // --- Fallback Logic ---
+        if (string.IsNullOrEmpty(cloudFunctionUrl) || !cloudFunctionUrl.StartsWith("http"))
+        {
+            Debug.LogWarning("Cloud Function URL is not set or is invalid in DialogueManager. Using fallback dialogue.");
+            _currentLineFullText = "(The heavens are silent today.)";
+            yield return StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
+            yield break; // Exit the coroutine early
+        }
 
-        // Initialize the thinking phrases for this request.
+        currentState = DialogueState.AwaitingLLM;
+        uiController.SetDialogueLine(speakerName, "");
         DisplayNextThinkingPhrase(true);
 
-        string generatedText;
+        // --- Weighted Topic Selection Logic ---
+        Dictionary<string, object> chosenStatPool = null;
+        
+        bool hasRecentStats = RunSummaryService.IsNewSummaryAvailable && RunSummaryService.LastRunSummary.Count > 0;
+        bool hasHistoricalStats = playerData.historicalStats.Count > 0;
 
-        // --- This is where your actual web request would go ---
-        if (useDebugMode)
+        if (hasRecentStats && (!hasHistoricalStats || Random.value > historicalStatChance))
         {
-            // Simulate a long network delay for testing.
-            yield return new WaitForSeconds(2.0f);
-            generatedText = "This is a dynamically generated response after a long wait!";
+            chosenStatPool = RunSummaryService.LastRunSummary;
+            RunSummaryService.ConsumeSummary();
         }
-        else
+        else if (hasHistoricalStats)
         {
-            // Here you would implement your async UnityWebRequest logic.
-            // For now, we'll just use a placeholder.
-            generatedText = "This should be replaced by your real web request result.";
-            // Example:
-            // var request = UnityWebRequest.Post(cloudFunctionUrl, "{}");
-            // yield return request.SendWebRequest();
-            // if(request.result == UnityWebRequest.Result.Success) {
-            //    generatedText = request.downloadHandler.text;
-            // } else {
-            //    generatedText = "Sorry, I'm having trouble thinking right now.";
-            // }
+            chosenStatPool = playerData.historicalStats.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
         }
-        _currentLineFullText = generatedText;
-
-        isWaitingForLLM = false;
-
-        if (currentState != DialogueState.Ending)
+        
+        if (chosenStatPool == null || chosenStatPool.Count == 0)
         {
-            // This prevents the user's spam-clicking from skipping the result.
-            StartCoroutine(InputCooldown(customDuration: 1.0f));
-
-            if (typewriterCoroutine != null) StopCoroutine(typewriterCoroutine);
-            typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
+            _currentLineFullText = "(My mind is a blank... how unusual.)";
+            yield return StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
+            yield break;
         }
+
+        // --- Select one random statistic from the chosen pool ---
+        var randomStat = chosenStatPool.ElementAt(Random.Range(0, chosenStatPool.Count));
+
+        // --- Prepare and Send Web Request ---
+        var payload = new LLMRequestPayload
+        {
+            npc_personality = currentNpc.NPCPersonality,
+            statistic_to_comment_on = randomStat
+        };
+        string jsonPayload = JsonConvert.SerializeObject(payload);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonPayload);
+
+        using (UnityWebRequest request = new UnityWebRequest(cloudFunctionUrl, "POST"))
+        {
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                _currentLineFullText = request.downloadHandler.text;
+            }
+            else
+            {
+                Debug.LogError($"Error requesting LLM commentary: {request.error}\n{request.downloadHandler.text}");
+                _currentLineFullText = "(My thoughts are... clouded. Apologies.)";
+            }
+        }
+        
+        StartCoroutine(InputCooldown(customDuration: 0.5f));
+        typewriterCoroutine = StartCoroutine(ShowTypewriterText(speakerName, _currentLineFullText));
     }
-
-
-    // A helper method to manage and display the thinking phrases.
+    
     private void DisplayNextThinkingPhrase(bool isFirstPhrase = false)
     {
-        // If this is the first phrase or our temporary pool is empty, refill it.
         if (isFirstPhrase || currentThinkingPhrases == null || currentThinkingPhrases.Count == 0)
         {
-            // Make a copy from the master list so we can safely remove items.
             currentThinkingPhrases = new List<string>(llmThinkingPhrases);
         }
 
-        // Pick a random phrase from the current pool.
         int randomIndex = Random.Range(0, currentThinkingPhrases.Count);
         string phrase = currentThinkingPhrases[randomIndex];
-
-        // Remove it so it's not picked again until the pool is refilled.
         currentThinkingPhrases.RemoveAt(randomIndex);
-
-        // Display the thinking phrase.
+        
         uiController.SetDialogueLine(currentNpc.NPCName, phrase);
     }
 
-    // NEW: Coroutine to manage input cooldown.
-    /// <summary>
-    /// Prevents input for a short duration to avoid accidental skips.
-    /// </summary>
-    /// <param name="isSkipped">If true, uses a minimal delay. If false, uses the configured natural end delay.</param>
     private IEnumerator InputCooldown(bool isSkipped = false, float? customDuration = null)
     {
         acceptInput = false;
-
         if (customDuration.HasValue)
         {
-            // If a custom duration is provided, use it.
             yield return new WaitForSeconds(customDuration.Value);
         }
         else if (isSkipped)
@@ -364,7 +372,6 @@ public class DialogueManager : MonoBehaviour
         {
             yield return new WaitForSeconds(naturalEndDelay);
         }
-
         acceptInput = true;
     }
 
@@ -373,7 +380,6 @@ public class DialogueManager : MonoBehaviour
         if (currentState == DialogueState.Inactive) return;
 
         currentState = DialogueState.Ending;
-        // MODIFIED: Safely stop the coroutine if it's running
         if (typewriterCoroutine != null)
         {
             StopCoroutine(typewriterCoroutine);
@@ -387,9 +393,7 @@ public class DialogueManager : MonoBehaviour
 
         currentConversation = null;
         currentNpc = null;
-
         PlayerInputManager.Instance.SwitchToPlayerControls();
-
         currentState = DialogueState.Inactive;
     }
 }
