@@ -112,14 +112,14 @@ MonoBehaviour:
   playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
   naturalEndDelay: 0.5
   typewriterSpeed: 30
-  useDebugMode: 1
-  cloudFunctionUrl: 
+  cloudFunctionUrl: https://us-west1-adaptivesurvivors.cloudfunctions.net/post_run_commentary_function
   defaultPortrait: {fileID: -1556463978589607206, guid: 509e8e9f81098eb4eb8bd8d78a021431, type: 3}
   llmThinkingPhrases:
   - Hmm...
   - Let me think...
   - Just a moment.
   - ...
+  historicalStatChance: 0.2
 --- !u!1 &3814142388022021879
 GameObject:
   m_ObjectHideFlags: 0

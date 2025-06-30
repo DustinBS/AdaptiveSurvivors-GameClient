@@ -446,6 +446,7 @@ MonoBehaviour:
   timeElapsed: 0
   waveEndElite: {fileID: 11400000, guid: 977a424087b197a40b9a45a7ee41c5d5, type: 2}
   enemySpawner: {fileID: 1209082159}
+  playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
 --- !u!4 &639988202
 Transform:
   m_ObjectHideFlags: 0
