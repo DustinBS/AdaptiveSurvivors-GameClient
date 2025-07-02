@@ -113,15 +113,8 @@ public class GameManager : MonoBehaviour
     {
         if (CurrentState == GameState.SeerEncounter)
         {
-            // 1. Advance the wave number.
-            currentWave++;
-            Debug.Log($"Seer encounter complete. Advancing to Wave {currentWave}!");
-
-            // 2. Set the state back to Playing.
             CurrentState = GameState.Playing;
             Debug.Log("Game state changed back to Playing.");
-
-            // 3. Explicitly resume the spawner.
             enemySpawner.StartSpawning();
         }
     }
@@ -184,17 +177,12 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log($"Wave {currentWave} complete! Spawning elite boss...");
         // Check if the next wave is a boss wave to trigger the Seer.
+        SpawnWaveEndElite();
         if ((currentWave + 1) % bossWaveInterval == 0)
         {
             isSeerEncounterQueued = true;
             EnterAwaitingSeerState();
         }
-        else
-        {
-            // Spawn normal end-of-wave elite.
-            SpawnWaveEndElite();
-        }
-
         currentWave++;
         Debug.Log($"Advancing to Wave {currentWave}!");
     }
@@ -229,7 +217,7 @@ public class GameManager : MonoBehaviour
             CurrentState = GameState.SeerEncounter;
             Debug.Log("Game state changed to SeerEncounter. Spawning Seer and despawning Vexers.");
 
-            DespawnAllVexers();
+            enemySpawner.DespawnAllExemptEnemies();
             SpawnSeer();
 
             isSeerEncounterQueued = false;

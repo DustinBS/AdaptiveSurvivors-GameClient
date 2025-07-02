@@ -34,4 +34,8 @@ public class EnemyData : ScriptableObject
     [Header("Visuals")]
     [Tooltip("The prefab containing the enemy's visuals and core components like EnemyBrain and EnemyHealth.")]
     public GameObject visualPrefab;
+
+    [Header("Behavioral Flags")]
+    [Tooltip("If true, this enemy does not need to be killed for no enemy checks for events like the Seer encounter to begin. It will be despawned automatically.")]
+    public bool isExemptFromClearanceChecks = false;
 }

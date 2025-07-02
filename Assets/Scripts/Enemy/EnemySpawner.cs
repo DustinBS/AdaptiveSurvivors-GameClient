@@ -49,8 +49,8 @@ public class EnemySpawner : MonoBehaviour
     private Transform playerTransform;
     private List<EnemyData> runtimeElitePool;
     private bool isSpawningPaused = false;
-    private List<GameObject> activeEnemies = new List<GameObject>();
-
+    private List<GameObject> clearanceEnemies = new List<GameObject>();
+    private List<GameObject> exemptEnemies = new List<GameObject>();
 
     private void Awake()
     {
@@ -89,7 +89,7 @@ public class EnemySpawner : MonoBehaviour
         spawnTimer -= Time.deltaTime;
         if (spawnTimer <= 0f)
         {
-            if (transform.childCount < maxEnemiesOnScreen)
+            if ((clearanceEnemies.Count + exemptEnemies.Count) < maxEnemiesOnScreen)
             {
                 SpawnEnemy();
             }
@@ -100,13 +100,15 @@ public class EnemySpawner : MonoBehaviour
     private void LateUpdate()
     {
         // Clean up the list by removing any enemies that were destroyed.
-        activeEnemies.RemoveAll(item => item == null);
+        clearanceEnemies.RemoveAll(item => item == null);
+        exemptEnemies.RemoveAll(item => item == null);
 
         // If the game is waiting for the Seer and all enemies are now gone, fire the event.
-        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.AwaitingSeer && activeEnemies.Count == 0)
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.AwaitingSeer && clearanceEnemies.Count == 0)
         {
             // Check if spawning is paused to ensure this only fires once after being triggered.
-            if (isSpawningPaused) {
+            if (isSpawningPaused)
+            {
                 OnAllEnemiesCleared?.Invoke();
             }
         }
@@ -148,7 +150,8 @@ public class EnemySpawner : MonoBehaviour
         GameObject enemyInstance = Instantiate(enemyData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
 
         // Add the newly spawned enemy to our tracking list.
-        activeEnemies.Add(enemyInstance);
+        if (enemyData.isExemptFromClearanceChecks) { exemptEnemies.Add(enemyInstance); }
+        else { clearanceEnemies.Add(enemyInstance); }
 
         if (enemyInstance.TryGetComponent<EnemyBrain>(out var brain))
         {
@@ -224,5 +227,31 @@ public class EnemySpawner : MonoBehaviour
         Gizmos.DrawWireSphere(playerTransform.position, minSpawnDistanceFromPlayer);
         Gizmos.color = new Color(1, 0, 0, 0.25f);
         Gizmos.DrawWireSphere(playerTransform.position, spawnRadius);
+    }
+
+    public void DespawnAllExemptEnemies()
+    {
+        if (exemptEnemies.Count > 0)
+        {
+            Debug.Log($"Despawning {exemptEnemies.Count} exempt enemies due to a system event.");
+            // Iterate backwards through a copy of the list because the Despawn method might modify the original list.
+            foreach (var enemy in exemptEnemies.ToList())
+            {
+                if (enemy != null)
+                {
+                    // This robustly checks if the enemy is a Vexer with a special Despawn method.
+                    if (enemy.TryGetComponent<VectorVexerController>(out var vexer))
+                    {
+                        vexer.Despawn(VectorVexerController.DespawnReason.ForcedBySystem);
+                    }
+                    else
+                    {
+                        // Fallback for other exempt types that might not have a special Despawn method.
+                        Destroy(enemy);
+                    }
+                }
+            }
+            exemptEnemies.Clear();
+        }
     }
 }
