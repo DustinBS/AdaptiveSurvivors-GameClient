@@ -46,4 +46,10 @@ public class SceneChangeInteractable : MonoBehaviour, IInteractable
     {
         return interactionPrompt;
     }
+
+    public InteractionType GetInteractionType()
+    {
+        return InteractionType.Door;
+    }
+
 }

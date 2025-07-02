@@ -2,17 +2,6 @@
 
 using System.Collections.Generic;
 
-// An enum to define all stats that a bargain can possibly target.
-public enum BargainTargetStat
-{
-    MaxHealth,
-    Armor,
-    MoveSpeed,
-    DashCooldown,
-    AttackDamage,
-    AttackSpeed
-}
-
 /// <summary>
 /// A data structure representing a single buff or debuff.
 /// </summary>
@@ -26,12 +15,25 @@ public class BargainEffect
 }
 
 /// <summary>
+/// An enum to define all stats that a bargain can possibly target.
+/// </summary>
+public enum BargainTargetStat
+{
+    MaxHealth,
+    Armor,
+    MoveSpeed,
+    DashCooldown,
+    AttackDamage,
+    AttackSpeed
+}
+
+/// <summary>
 /// Represents a single bargain choice offered by the Seer.
 /// </summary>
 [System.Serializable]
 public class BargainChoice
 {
-    public string description; // e.g., "Embrace the shadows, but your body will wither."
+    public string description;
     public List<BargainEffect> buffs;
     public List<BargainEffect> debuffs;
 }
@@ -43,6 +45,6 @@ public class BargainChoice
 public class SeerResultPayload
 {
     public string playerId;
-    public string dialogue; // The LLM-generated line.
-    public List<BargainChoice> choices; // The list of bargains offered.
+    public string dialogue;
+    public List<BargainChoice> choices;
 }

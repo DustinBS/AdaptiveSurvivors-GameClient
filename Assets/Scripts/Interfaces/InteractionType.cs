@@ -8,5 +8,6 @@ public enum InteractionType
 {
     Chat,       // Standard dialogue or LLM-generated commentary.
     Shop,       // Opens a shop UI for buying/selling items.
-    QuestGiver  // Offers or progresses a quest.
+    QuestGiver,  // Offers or progresses a quest.
+    Door        // Goes to a different scene.
 }

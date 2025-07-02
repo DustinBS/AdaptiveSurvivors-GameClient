@@ -18,9 +18,6 @@ public class NPCController : MonoBehaviour, IInteractable
     [Tooltip("The starting DialogueData asset for when the player interacts with this NPC.")]
     public DialogueData startingDialogue;
 
-    // We no longer need the list of supported interactions here,
-    // as that will now be driven by the choices within the DialogueData assets themselves.
-
     // Public properties to allow other systems (like the DialogueManager) to safely access the NPC's data.
     public string NPCName => npcData != null ? npcData.npcName : "Unknown";
     public string NPCPersonality => npcData != null ? npcData.npcPersonality : "A generic NPC.";

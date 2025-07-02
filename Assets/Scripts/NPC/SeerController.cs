@@ -1,96 +1,147 @@
 // GameClient/Assets/Scripts/NPC/SeerController.cs
 
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Orchestrates the Ethereal Seer encounter. It listens for the Seer result from Kafka,
-/// controls the game state, manages the Seer's UI, and applies the chosen bargain.
+/// Orchestrates the Ethereal Seer encounter. It is instantiated by the GameManager,
+/// manages its own lifecycle, instantiates its own UI from a prefab, and controls player input state.
 /// </summary>
-public class SeerController : MonoBehaviour
+public class SeerController : MonoBehaviour, IInteractable
 {
-    [Header("Component References")]
-    [Tooltip("Reference to the Seer's UI controller in the scene.")]
-    [SerializeField] private SeerUIController uiController;
-    [Tooltip("Reference to the player's bargain controller.")]
-    [SerializeField] private PlayerBargainController playerBargainController;
+    [Header("Asset References")]
+    [Tooltip("Reference to the Seer UI Prefab that will be instantiated.")]
+    [SerializeField] private GameObject seerUiPrefab;
 
-    [Header("Game Object References")]
-    [Tooltip("The parent GameObject containing the Seer's visuals, to be enabled/disabled.")]
-    [SerializeField] private GameObject seerVisuals;
+    // --- Runtime References ---
+    private PlayerBargainController playerBargainController;
+    private SeerUIController uiInstance; // A reference to the UI we instantiate.
 
-    void Awake()
+    // --- State ---
+    private SeerResultPayload cachedSeerPayload;
+    private bool isReadyForInteraction = false;
+    private bool isEncounterActive = false;
+
+    void Start()
     {
-        // Ensure components are assigned to prevent null reference errors.
-        if (uiController == null) Debug.LogError("SeerUIController not assigned in SeerController.", this);
-        if (playerBargainController == null) Debug.LogError("PlayerBargainController not assigned in SeerController.", this);
+        // On start, the Seer has been spawned. We find necessary scene components.
+        playerBargainController = FindFirstObjectByType<PlayerBargainController>();
+        if (playerBargainController == null)
+        {
+             Debug.LogError("SeerController could not find a PlayerBargainController in the scene.", this);
+             enabled = false;
+        }
 
-        // Hide the Seer and its UI by default.
-        seerVisuals.SetActive(false);
-        uiController.gameObject.SetActive(false);
+        // Push the player out of the way if they are in the center.
+        if (Vector3.Distance(transform.position, playerBargainController.transform.position) < 1.0f)
+        {
+            playerBargainController.transform.position += Vector3.up * 1.5f;
+        }
     }
 
     void OnEnable()
     {
-        // Subscribe to the Kafka event when this controller is active.
         KafkaClient.OnSeerResultReceived += HandleSeerResult;
-        // Subscribe to the UI event for when the player makes a choice.
-        if (uiController != null)
-        {
-            uiController.OnBargainSelected += HandleBargainSelected;
-        }
     }
 
     void OnDisable()
     {
-        // Always unsubscribe to prevent memory leaks.
         KafkaClient.OnSeerResultReceived -= HandleSeerResult;
-        if (uiController != null)
+        // Unsubscribe from the UI instance if it exists
+        if (uiInstance != null)
         {
-            uiController.OnBargainSelected -= HandleBargainSelected;
+            uiInstance.OnBargainSelected -= HandleBargainSelected;
         }
     }
 
-    /// <summary>
-    /// This is the entry point for the encounter, triggered by a Kafka message.
-    /// </summary>
     private void HandleSeerResult(SeerResultPayload payload)
     {
-        // Pause the game's wave progression.
-        GameManager.Instance.EnterSeerEncounterState();
-
-        // Show the Seer's visuals and UI.
-        seerVisuals.SetActive(true);
-        uiController.gameObject.SetActive(true);
-
-        // Populate the UI with the data received from the backend.
-        uiController.DisplayEncounter(payload.dialogue, payload.choices);
+        Debug.Log("SeerController received data from Kafka. Caching payload and awaiting interaction.");
+        cachedSeerPayload = payload;
+        isReadyForInteraction = true;
     }
 
-    /// <summary>
-    /// This is the exit point for the encounter, triggered by the player's choice in the UI.
-    /// </summary>
-    private void HandleBargainSelected(BargainChoice choice)
+    public void Interact()
     {
-        // Apply the chosen effects to the player.
-        if (playerBargainController != null)
+        if (!isReadyForInteraction || isEncounterActive) return;
+
+        isEncounterActive = true;
+        Debug.Log("Player interacted with Seer. Switching to UI controls and displaying bargain UI.");
+
+        // 1. Switch player input to the UI map for consistency.
+        PlayerInputManager.Instance.SwitchToUIControls();
+
+        // 2. Instantiate the UI from the prefab.
+        if (seerUiPrefab == null)
         {
-            // The SeerController's job is to call methods on other scripts to apply the bargain.
-            playerBargainController.ApplyBargainEffects(choice.buffs);
-            playerBargainController.ApplyBargainEffects(choice.debuffs);
+            Debug.LogError("Seer UI Prefab is not assigned in SeerController!");
+            EndEncounterAbruptly();
+            return;
+        }
+        GameObject uiObject = Instantiate(seerUiPrefab);
+        uiInstance = uiObject.GetComponent<SeerUIController>();
+
+        if (uiInstance == null)
+        {
+            Debug.LogError("Instantiated Seer UI Prefab is missing a SeerUIController component!");
+            EndEncounterAbruptly();
+            return;
         }
 
-        // End the encounter.
-        EndEncounter();
+        // 3. Subscribe to the UI's event and populate it with data.
+        uiInstance.OnBargainSelected += HandleBargainSelected;
+        uiInstance.DisplayEncounter(cachedSeerPayload.dialogue, cachedSeerPayload.choices);
     }
 
-    private void EndEncounter()
+    private void HandleBargainSelected(BargainChoice choice)
     {
-        // Hide the Seer's visuals and UI.
-        seerVisuals.SetActive(false);
-        uiController.gameObject.SetActive(false);
+        playerBargainController?.ApplyBargainEffects(choice.buffs);
+        playerBargainController?.ApplyBargainEffects(choice.debuffs);
 
-        // Resume the game's wave progression.
+        StartCoroutine(DespawnRoutine());
+    }
+
+    private void EndEncounterAbruptly()
+    {
+        // Fallback method in case of error.
+        PlayerInputManager.Instance.SwitchToPlayerControls();
         GameManager.Instance.ExitSeerEncounterState();
+        Destroy(gameObject);
+    }
+
+    private IEnumerator DespawnRoutine()
+    {
+        isReadyForInteraction = false;
+
+        // Destroy the UI instance immediately.
+        if (uiInstance != null)
+        {
+            uiInstance.OnBargainSelected -= HandleBargainSelected;
+            Destroy(uiInstance.gameObject);
+        }
+
+        // Play a despawn animation/effect on the Seer itself.
+        Debug.Log("Seer is despawning...");
+        // TODO: Trigger particle effect or animation here.
+        yield return new WaitForSeconds(1.5f);
+
+        // Restore player controls and game state.
+        PlayerInputManager.Instance.SwitchToPlayerControls();
+        GameManager.Instance.ExitSeerEncounterState();
+
+        // The Seer's final act is to destroy its own GameObject.
+        Destroy(gameObject);
+    }
+
+    public string GetInteractionPrompt()
+    {
+        // Only show a prompt if the data has arrived from the backend and the UI isn't already open.
+        return (isReadyForInteraction && !isEncounterActive) ? "Consult the Seer" : "";
+    }
+
+    public InteractionType GetInteractionType()
+    {
+        return InteractionType.Chat;
     }
 }

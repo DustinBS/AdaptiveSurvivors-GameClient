@@ -1,6 +1,7 @@
 // GameClient/Assets/Scripts/Managers/GameManager.cs
 
 using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -10,28 +11,26 @@ using System.Collections.Generic;
 /// </summary>
 public class GameManager : MonoBehaviour
 {
-    public enum GameState { Playing, Paused, GameOver, AwaitingSeer }
+    public enum GameState { Playing, Paused, GameOver, AwaitingSeer, SeerEncounter }
 
     // --- Singleton Instance ---
     // Provides easy, static access to the manager from other scripts in the same scene.
     public static GameManager Instance { get; private set; }
 
     [Header("Game State")]
+    public GameState CurrentState { get; private set; }
     [Tooltip("The current wave number.")]
     public int currentWave = 1;
     [Tooltip("The time elapsed since the start of the current run (in seconds).")]
     public float timeElapsed = 0f;
-
-    // The current state of the game. Making it public allows other scripts to check it if needed.
-    public GameState CurrentState { get; private set; }
 
     [Header("Seer System")]
     [Tooltip("A unique identifier for the current run, sent with Kafka events.")]
     public string runId { get; private set; }
     [Tooltip("The Seer encounter will be triggered before waves that are a multiple of this number.")]
     [SerializeField] private int bossWaveInterval = 3;
-    [Tooltip("The Seer prefab to spawn for the encounter.")]
     [SerializeField] private GameObject seerPrefab;
+    private bool isSeerEncounterQueued = false;
 
     [Header("Wave Boss Spawning")]
     [Tooltip("The EnemyData for the special elite to spawn between waves.")]
@@ -66,12 +65,14 @@ public class GameManager : MonoBehaviour
     {
         // Subscribe to the static OnPlayerDeath event when this manager is enabled.
         PlayerStatus.OnPlayerDeath += HandlePlayerDeath;
+        EnemySpawner.OnAllEnemiesCleared += HandleAllEnemiesCleared;
     }
 
     void OnDisable()
     {
         // ALWAYS unsubscribe from static events on disable/destroy to prevent memory leaks.
         PlayerStatus.OnPlayerDeath -= HandlePlayerDeath;
+        EnemySpawner.OnAllEnemiesCleared -= HandleAllEnemiesCleared;
     }
 
     void Update()
@@ -102,6 +103,7 @@ public class GameManager : MonoBehaviour
             CurrentState = GameState.AwaitingSeer;
             Debug.Log("Game state changed to AwaitingSeer.");
         }
+        DespawnAllVexers();
     }
 
     /// <summary>
@@ -176,7 +178,9 @@ public class GameManager : MonoBehaviour
         // Check if the next wave is a boss wave to trigger the Seer.
         if ((currentWave + 1) % bossWaveInterval == 0)
         {
-            TriggerSeerEncounter();
+            isSeerEncounterQueued = true;
+            EnterSeerEncounterState();
+            enemySpawner.StopSpawning();
         }
         else
         {
@@ -186,28 +190,6 @@ public class GameManager : MonoBehaviour
 
         currentWave++;
         Debug.Log($"Advancing to Wave {currentWave}!");
-    }
-
-    private void TriggerSeerEncounter()
-    {
-        if (seerPrefab != null)
-        {
-            // Spawn the seer at the center of the screen.
-            Instantiate(seerPrefab, Vector3.zero, Quaternion.identity);
-        }
-        else
-        {
-            Debug.LogError("Seer Prefab is not assigned in GameManager!", this);
-        }
-
-        var payload = new Dictionary<string, object>
-        {
-            { "run_id", this.runId }
-        };
-        KafkaClient.Instance.SendGameplayEvent("seer_encounter_trigger", this.runId, payload);
-
-        // Enter the AwaitingSeer state, which pauses wave progression.
-        EnterSeerEncounterState();
     }
 
     private void SpawnWaveEndElite()
@@ -220,6 +202,36 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.LogWarning("Cannot spawn wave end elite. Spawner or elite data is not assigned in GameManager.", this);
+        }
+    }
+
+    private void SpawnSeer()
+    {
+        if (isSeerEncounterQueued)
+        {
+            Debug.Log("All enemies cleared. Spawning the Seer.");
+            if (seerPrefab != null)
+            {
+                Instantiate(seerPrefab, Vector3.zero, Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogError("Seer Prefab is not assigned in GameManager!");
+            }
+            isSeerEncounterQueued = false; // The Seer is spawned, so we can unset the flag.
+        }
+    }
+
+    private void DespawnAllVexers()
+    {
+        var activeVexers = FindObjectsByType<VectorVexerController>(FindObjectsSortMode.None);
+        if (activeVexers.Length > 0)
+        {
+            Debug.Log($"Despawning {activeVexers.Length} Vector Vexer(s).");
+            foreach (var vexer in activeVexers)
+            {
+                Destroy(vexer.gameObject);
+            }
         }
     }
 

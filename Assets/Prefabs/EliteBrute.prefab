@@ -42,31 +42,47 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.9998781
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0.0069823964
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0.013964456
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: 0.00004875599
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: -0.8
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: -1.6
       objectReference: {fileID: 0}
     - target: {fileID: 6069056819183110478, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
+      value: 0.017
+      objectReference: {fileID: 0}
+    - target: {fileID: 6557103559756317515, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
+      propertyPath: m_Size.x
+      value: 0.44812065
+      objectReference: {fileID: 0}
+    - target: {fileID: 6557103559756317515, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
+      propertyPath: m_Size.y
+      value: 0.6433545
+      objectReference: {fileID: 0}
+    - target: {fileID: 6557103559756317515, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
+      propertyPath: m_Offset.x
+      value: 0.1895402
+      objectReference: {fileID: 0}
+    - target: {fileID: 6557103559756317515, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
+      propertyPath: m_Offset.y
+      value: -0.27422062
       objectReference: {fileID: 0}
     - target: {fileID: 7524550127683632643, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       propertyPath: m_Constraints
@@ -82,6 +98,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4734188826638042580, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3647483566622093229}
+    - targetCorrespondingSourceObject: {fileID: 4734188826638042580, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1307213826571372640}
   m_SourcePrefab: {fileID: 100100000, guid: 9ed20e4ed3548bb4abf022e51ac9f535, type: 3}
 --- !u!1 &417036857736111536 stripped
 GameObject:
@@ -100,6 +119,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 705e2cc95b3a7aa4cb43bdab2da9e8f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  transitionDuration: 0.25
+  juggernautColor: {r: 1, g: 0.6, b: 0.6, a: 1}
+  skirmisherColor: {r: 0.6, g: 0.8, b: 1, a: 1}
   juggernautScale: 5
   skirmisherScale: 0.5
   juggernautHealthMod: 5
@@ -118,3 +140,48 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cce31f24226d6d842a0984aaefd83bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!68 &1307213826571372640
+EdgeCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 417036857736111536}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_EdgeRadius: 0
+  m_Points:
+  - {x: -0.62736726, y: -0.48643485}
+  - {x: -0.087773785, y: -0.03708091}
+  - {x: 0.14118859, y: -0.033631995}
+  - {x: -0.30423495, y: -0.6655717}
+  m_AdjacentStartPoint: {x: 0, y: 0}
+  m_AdjacentEndPoint: {x: 0, y: 0}
+  m_UseAdjacentStartPoint: 0
+  m_UseAdjacentEndPoint: 0

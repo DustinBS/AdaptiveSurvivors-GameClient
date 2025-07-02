@@ -3,14 +3,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 /// <summary>
-/// Manages the procedural spawning of enemies. Calls the centralized Initialize method
-/// on the EnemyBrain, decoupling the spawner from enemy-specific setup logic.
+/// Manages the procedural spawning of enemies. Now tracks active enemies and can
+/// be paused for special encounters like the Ethereal Seer.
 /// </summary>
 public class EnemySpawner : MonoBehaviour
 {
     public static EnemySpawner Instance { get; private set; }
+
+    public static event Action OnAllEnemiesCleared;
 
     [Header("Spawner Configuration")]
     [Tooltip("List of regular 'fodder' enemy types this spawner can instantiate.")]
@@ -41,9 +44,13 @@ public class EnemySpawner : MonoBehaviour
     [Range(0f, 1f)]
     public float eliteSpawnChance = 0.1f;
 
+    // --- Private State ---
     private float spawnTimer;
     private Transform playerTransform;
     private List<EnemyData> runtimeElitePool;
+    private bool isSpawningPaused = false;
+    private List<GameObject> activeEnemies = new List<GameObject>();
+
 
     private void Awake()
     {
@@ -59,7 +66,6 @@ public class EnemySpawner : MonoBehaviour
 
     private void Start()
     {
-        // Find player
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
@@ -72,29 +78,13 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        // Initialize the runtime pool with all configured elites.
         runtimeElitePool = new List<EnemyData>(eliteEnemies);
-        // Also add the unique elites to the initial pool.
         runtimeElitePool.AddRange(uniqueEliteData);
-    }
-
-    /// <summary>
-    /// Called by a unique enemy when it is defeated or despawns,
-    /// adding it back to the available spawn pool.
-    /// </summary>
-    public void OnUniqueEnemyDefeated(EnemyData defeatedEnemyData)
-    {
-        // If the enemy is in the configured unique list and not already in the pool, add it back.
-        if (uniqueEliteData.Contains(defeatedEnemyData) && !runtimeElitePool.Contains(defeatedEnemyData))
-        {
-            runtimeElitePool.Add(defeatedEnemyData);
-            Debug.Log($"Added '{defeatedEnemyData.name}' back to the elite spawn pool.");
-        }
     }
 
     private void Update()
     {
-        if (playerTransform == null) return;
+        if (playerTransform == null || isSpawningPaused) return;
 
         spawnTimer -= Time.deltaTime;
         if (spawnTimer <= 0f)
@@ -107,6 +97,21 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        // Clean up the list by removing any enemies that were destroyed.
+        activeEnemies.RemoveAll(item => item == null);
+
+        // If the game is waiting for the Seer and all enemies are now gone, fire the event.
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.AwaitingSeer && activeEnemies.Count == 0)
+        {
+            // Check if spawning is paused to ensure this only fires once after being triggered.
+            if (isSpawningPaused) {
+                OnAllEnemiesCleared?.Invoke();
+            }
+        }
+    }
+
     private void SpawnEnemy()
     {
         EnemyData enemyToSpawnData = ChooseEnemyType();
@@ -116,10 +121,6 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Spawns a specific enemy, typically for a boss wave or special event.
-    /// </summary>
-    /// <param name="specialEnemyData">The EnemyData for the special enemy.</param>
     public void SpawnSpecialEnemy(EnemyData specialEnemyData)
     {
         if (specialEnemyData == null)
@@ -127,13 +128,9 @@ public class EnemySpawner : MonoBehaviour
             Debug.LogError("SpawnSpecialEnemy called with null EnemyData.", this);
             return;
         }
-
         InstantiateAndInitializeEnemy(specialEnemyData);
     }
 
-    /// <summary>
-    /// A unified, robust method for instantiating and initializing any enemy.
-    /// </summary>
     private void InstantiateAndInitializeEnemy(EnemyData enemyData)
     {
         if (enemyData.visualPrefab == null)
@@ -150,7 +147,9 @@ public class EnemySpawner : MonoBehaviour
         Vector3 spawnPosition = GetRandomSpawnPosition();
         GameObject enemyInstance = Instantiate(enemyData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
 
-        // The spawner's only job is to get the brain and kick off initialization.
+        // Add the newly spawned enemy to our tracking list.
+        activeEnemies.Add(enemyInstance);
+
         if (enemyInstance.TryGetComponent<EnemyBrain>(out var brain))
         {
             brain.Initialize(playerTransform, enemyData);
@@ -164,44 +163,66 @@ public class EnemySpawner : MonoBehaviour
 
     private EnemyData ChooseEnemyType()
     {
-        // Use the runtimeElitePool, which only contains currently available elites.
         bool canSpawnElite = runtimeElitePool.Any() &&
                              GameManager.Instance != null &&
                              GameManager.Instance.currentWave >= eliteStartWave &&
-                             Random.value < eliteSpawnChance;
+                             UnityEngine.Random.value < eliteSpawnChance;
 
         if (canSpawnElite)
         {
-            // picks from the pool of available elites
-            return runtimeElitePool[Random.Range(0, runtimeElitePool.Count)];
+            return runtimeElitePool[UnityEngine.Random.Range(0, runtimeElitePool.Count)];
         }
 
-        // Default to spawning a fodder enemy if available.
         if (fodderEnemies.Any())
         {
-            return fodderEnemies[Random.Range(0, fodderEnemies.Count)];
+            return fodderEnemies[UnityEngine.Random.Range(0, fodderEnemies.Count)];
         }
-
         return null;
     }
 
     private Vector3 GetRandomSpawnPosition()
     {
-        // Calculate a random angle and distance for a point on a ring.
-        float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        float randomAngle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
         Vector3 direction = new Vector3(Mathf.Sin(randomAngle), Mathf.Cos(randomAngle), 0);
-        float distance = Random.Range(minSpawnDistanceFromPlayer, spawnRadius);
+        float distance = UnityEngine.Random.Range(minSpawnDistanceFromPlayer, spawnRadius);
 
         return playerTransform.position + direction * distance;
     }
 
+    public void OnUniqueEnemyDefeated(EnemyData defeatedEnemyData)
+    {
+        if (uniqueEliteData.Contains(defeatedEnemyData) && !runtimeElitePool.Contains(defeatedEnemyData))
+        {
+            runtimeElitePool.Add(defeatedEnemyData);
+            Debug.Log($"Added '{defeatedEnemyData.name}' back to the elite spawn pool.");
+        }
+    }
+
+    /// <summary>
+    /// Pauses all enemy spawning activities.
+    /// </summary>
+    public void StopSpawning()
+    {
+        isSpawningPaused = true;
+        Debug.Log("Enemy spawning has been paused.");
+    }
+
+    /// <summary>
+    /// Resumes all enemy spawning activities.
+    /// </summary>
+    public void StartSpawning()
+    {
+        isSpawningPaused = false;
+        spawnTimer = spawnInterval; // Reset timer to prevent instant spawn.
+        Debug.Log("Enemy spawning has been resumed.");
+    }
+
     private void OnDrawGizmosSelected()
     {
-        // This visual aid is helpful for debugging spawn distances in the editor.
         if (playerTransform == null) return;
-        Gizmos.color = new Color(1, 1, 0, 0.25f); // Yellow for minimum distance
+        Gizmos.color = new Color(1, 1, 0, 0.25f);
         Gizmos.DrawWireSphere(playerTransform.position, minSpawnDistanceFromPlayer);
-        Gizmos.color = new Color(1, 0, 0, 0.25f); // Red for maximum distance
+        Gizmos.color = new Color(1, 0, 0, 0.25f);
         Gizmos.DrawWireSphere(playerTransform.position, spawnRadius);
     }
 }

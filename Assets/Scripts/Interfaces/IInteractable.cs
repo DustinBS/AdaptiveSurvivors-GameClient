@@ -15,4 +15,10 @@ public interface IInteractable
     /// </summary>
     /// <returns>A string representing the action, e.g., "Talk to Sage" or "Enter Portal".</returns>
     string GetInteractionPrompt();
+
+    /// <summary>
+    /// Define what kind of interaction this is
+    /// </summary>
+    InteractionType GetInteractionType();
+
 }
