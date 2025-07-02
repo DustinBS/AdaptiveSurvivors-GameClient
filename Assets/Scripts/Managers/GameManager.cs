@@ -1,7 +1,6 @@
 // GameClient/Assets/Scripts/Managers/GameManager.cs
 
 using UnityEngine;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -11,18 +10,20 @@ using System.Collections.Generic;
 /// </summary>
 public class GameManager : MonoBehaviour
 {
-    public enum GameState { Playing, Paused, GameOver, AwaitingSeer, SeerEncounter }
+    public enum GameState { Playing, Paused, GameOver, AwaitingSeer }
 
     // --- Singleton Instance ---
     // Provides easy, static access to the manager from other scripts in the same scene.
     public static GameManager Instance { get; private set; }
 
     [Header("Game State")]
-    public GameState CurrentState { get; private set; }
     [Tooltip("The current wave number.")]
     public int currentWave = 1;
     [Tooltip("The time elapsed since the start of the current run (in seconds).")]
     public float timeElapsed = 0f;
+
+    // The current state of the game. Making it public allows other scripts to check it if needed.
+    public GameState CurrentState { get; private set; }
 
     [Header("Seer System")]
     [Tooltip("A unique identifier for the current run, sent with Kafka events.")]
@@ -65,14 +66,14 @@ public class GameManager : MonoBehaviour
     {
         // Subscribe to the static OnPlayerDeath event when this manager is enabled.
         PlayerStatus.OnPlayerDeath += HandlePlayerDeath;
-        EnemySpawner.OnAllEnemiesCleared += HandleAllEnemiesCleared;
+        EnemySpawner.OnAllEnemiesCleared += SpawnSeer;
     }
 
     void OnDisable()
     {
         // ALWAYS unsubscribe from static events on disable/destroy to prevent memory leaks.
         PlayerStatus.OnPlayerDeath -= HandlePlayerDeath;
-        EnemySpawner.OnAllEnemiesCleared -= HandleAllEnemiesCleared;
+        EnemySpawner.OnAllEnemiesCleared -= SpawnSeer;
     }
 
     void Update()
