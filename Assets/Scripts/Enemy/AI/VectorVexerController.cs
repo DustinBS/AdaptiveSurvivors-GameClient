@@ -37,6 +37,12 @@ public class VectorVexerController : MonoBehaviour
         Vector2.up, Vector2.down, Vector2.left, Vector2.right
     };
 
+    public enum DespawnReason
+    {
+        FailedPredictions,
+        ForcedBySystem // e.g., A Seer encounter is starting.
+    }
+
     void Awake()
     {
         enemyBrain = GetComponent<EnemyBrain>();
@@ -112,7 +118,7 @@ public class VectorVexerController : MonoBehaviour
 
         StartCoroutine(VectorShiftRoutine(predictionToUse));
 
-        if (consecutiveWrongPredictions >= wrongPredictionThreshold) { Despawn(); }
+        if (consecutiveWrongPredictions >= wrongPredictionThreshold) { Despawn(DespawnReason.FailedPredictions); }
         else { MakeNewFallbackPrediction(); }
     }
 
@@ -282,10 +288,21 @@ public class VectorVexerController : MonoBehaviour
     /// <summary>
     /// Handles the despawning of the Vexer.
     /// </summary>
-    private void Despawn()
+    public void Despawn(DespawnReason reason)
     {
-        Debug.Log("Vexer failed 3 predictions and despawned.");
-        // TODO: Trigger a "puff of smoke" particle effect.
+        // Use a switch to handle different despawn effects.
+        switch (reason)
+        {
+            case DespawnReason.FailedPredictions:
+                Debug.Log("Vexer failed 3 predictions and despawned in shame.");
+                // TODO: Trigger a "puff of smoke" particle effect.
+                break;
+            case DespawnReason.ForcedBySystem:
+                Debug.Log("Vexer was forced to despawn by a system event (e.g., Seer).");
+                // TODO: Trigger a more dramatic "banishing" particle effect.
+                break;
+        }
+
         if (EnemySpawner.Instance != null)
         {
             EnemySpawner.Instance.OnUniqueEnemyDefeated(enemyBrain.Data);
