@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="/Assets/UI/SeerUI.uss" />
+    <ui:VisualElement name="SeerRoot" class="seer-root">
+        <ui:VisualElement name="SeerPanel" class="seer-panel">
+            <ui:Label name="SeerDialogueLabel" text="The strands of fate converge... I have seen what is to come, and I offer you a choice to defy it." picking-mode="Ignore" uss-class="dialogue-text" style="font-size: 18px; -unity-text-align: upper-left;" />
+            <ui:VisualElement name="BargainChoicesContainer" style="margin-top: 19px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

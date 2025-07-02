@@ -2,35 +2,32 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
-using System.Linq;
 
 /// <summary>
-/// Handles player interaction with IInteractable objects. This version is state-aware,
-/// robust against scene changes, and uses LateUpdate for jitter-free UI positioning.
+/// Manages player interaction with IInteractable objects.
+/// Handles scene changes and ensures jitter-free UI updates.
 /// </summary>
 public class PlayerInteraction : MonoBehaviour
 {
-    [Tooltip("The radius around the player to check for interactable objects.")]
+    [Tooltip("The radius to check for interactable objects.")]
     [SerializeField] private float interactionRadius = 1.5f;
 
-    // --- References ---
     private PlayerControls playerControls;
     private InteractionPromptController _interactionPromptController;
 
-    // --- State ---
     private IInteractable _closestInteractable;
-    private Transform _closestInteractableTransform; // Cached transform for LateUpdate
-    private readonly Collider2D[] _colliders = new Collider2D[10];
+    private Transform _closestInteractableTransform; // Cached for UI positioning
 
     private void Awake()
     {
         if (PlayerInputManager.Instance == null)
         {
-            Debug.LogError("PlayerInteraction: PlayerInputManager.Instance is null. This script cannot function.", this);
+            Debug.LogError("PlayerInteraction requires PlayerInputManager.Instance.", this);
             enabled = false;
             return;
         }
         playerControls = PlayerInputManager.Instance.PlayerControls;
+        _interactionPromptController = FindFirstObjectByType<InteractionPromptController>();
     }
 
     private void OnEnable()
@@ -53,9 +50,7 @@ public class PlayerInteraction : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        _interactionPromptController = FindObjectOfType<InteractionPromptController>();
-
-        // Reset state on scene load to prevent prompts from sticking.
+        _interactionPromptController = FindFirstObjectByType<InteractionPromptController>();
         _closestInteractable = null;
         _closestInteractableTransform = null;
         _interactionPromptController?.HidePrompt();
@@ -63,7 +58,6 @@ public class PlayerInteraction : MonoBehaviour
 
     private void Update()
     {
-        // If player controls are not enabled, hide the prompt and do nothing.
         if (!PlayerInputManager.Instance.IsPlayerControlsEnabled)
         {
             if (_closestInteractable != null)
@@ -74,14 +68,11 @@ public class PlayerInteraction : MonoBehaviour
             }
             return;
         }
-
         FindAndHandleClosestInteractable();
     }
 
     /// <summary>
-    /// Jitter-Fix: The UI position is updated in LateUpdate, which runs *after* all
-    /// game logic and animation has finished for the frame. This ensures the UI
-    /// is positioned based on the object's final position for that frame.
+    /// Updates UI position in LateUpdate for smooth, jitter-free movement.
     /// </summary>
     private void LateUpdate()
     {
@@ -101,27 +92,35 @@ public class PlayerInteraction : MonoBehaviour
 
     private void FindAndHandleClosestInteractable()
     {
-        if (_interactionPromptController == null) return;
+        if (_interactionPromptController == null)
+        {
+            if (_closestInteractable != null)
+            {
+                _closestInteractable = null;
+                _closestInteractableTransform = null;
+            }
+            return;
+        }
 
-        int numFound = Physics2D.OverlapCircleNonAlloc(transform.position, interactionRadius, _colliders);
+        Collider2D[] foundColliders = Physics2D.OverlapCircleAll(transform.position, interactionRadius);
 
         IInteractable newClosestInteractable = null;
         Transform newClosestTransform = null;
         float closestDistanceSqr = float.MaxValue;
 
-        if (numFound > 0)
+        if (foundColliders != null && foundColliders.Length > 0)
         {
-            for (int i = 0; i < numFound; i++)
+            foreach (var collider in foundColliders)
             {
-                var interactable = _colliders[i].GetComponent<IInteractable>();
+                var interactable = collider.GetComponent<IInteractable>();
                 if (interactable != null)
                 {
-                    float dSqrToTarget = (transform.position - _colliders[i].transform.position).sqrMagnitude;
+                    float dSqrToTarget = (transform.position - collider.transform.position).sqrMagnitude;
                     if (dSqrToTarget < closestDistanceSqr)
                     {
                         closestDistanceSqr = dSqrToTarget;
                         newClosestInteractable = interactable;
-                        newClosestTransform = _colliders[i].transform;
+                        newClosestTransform = collider.transform;
                     }
                 }
             }
@@ -130,7 +129,6 @@ public class PlayerInteraction : MonoBehaviour
         if (newClosestInteractable != _closestInteractable)
         {
             _closestInteractable = newClosestInteractable;
-            // Cache the transform of the new closest interactable.
             _closestInteractableTransform = newClosestTransform;
 
             if (_closestInteractable == null)
@@ -139,7 +137,6 @@ public class PlayerInteraction : MonoBehaviour
             }
             else
             {
-                // We no longer pass the transform here; it's handled by LateUpdate.
                 _interactionPromptController.ShowPrompt(_closestInteractable.GetInteractionPrompt());
             }
         }

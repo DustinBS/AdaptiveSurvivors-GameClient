@@ -24,6 +24,8 @@ public class KafkaClient : MonoBehaviour
     public string gameplayEventsTopic = "gameplay_events";
     [Tooltip("Topic to consume adaptive parameters from")]
     public string adaptiveParamsTopic = "adaptive_params";
+    [Tooltip("Topic to consume Seer results from")]
+    public string seerResultsTopic = "seer_results";
     [Tooltip("Consumer group ID for adaptive parameters")]
     public string consumerGroupId = "unity_game_client";
 
@@ -41,6 +43,8 @@ public class KafkaClient : MonoBehaviour
     // event to pass the message envelope
     public delegate void OnAdaptiveMessageReceivedDelegate(AdaptiveMessageEnvelope envelope);
     public static event OnAdaptiveMessageReceivedDelegate OnAdaptiveMessageReceived;
+    public delegate void OnSeerResultReceivedDelegate(SeerResultPayload payload);
+    public static event OnSeerResultReceivedDelegate OnSeerResultReceived;
 
     // JSON serialization settings for consistent and compact message formatting.
     private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
@@ -110,7 +114,9 @@ public class KafkaClient : MonoBehaviour
         {
             var consumerBuilder = new ConsumerBuilder<string, string>(config);
             consumer = consumerBuilder.Build();
-            consumer.Subscribe(adaptiveParamsTopic);
+            var topics = new List<string> { adaptiveParamsTopic, seerResultsTopic };
+            consumer.Subscribe(topics);
+            Debug.Log($"Kafka Consumer subscribed to: {string.Join(", ", topics)}");
         }
         catch (Exception e)
         {
@@ -195,7 +201,16 @@ public class KafkaClient : MonoBehaviour
 
             // Invoke the event, passing the whole envelope. Subscribers are responsible
             // for parsing the specific payload based on the message_type.
-            OnAdaptiveMessageReceived?.Invoke(envelope);
+            if (envelope.message_type == "seer_result_update")
+            {
+                SeerResultPayload seerPayload = JsonConvert.DeserializeObject<SeerResultPayload>(envelope.payload);
+                OnSeerResultReceived?.Invoke(seerPayload);
+            }
+            else
+            {
+                // The original logic for adaptive enemies.
+                OnAdaptiveMessageReceived?.Invoke(envelope);
+            }
         }
         catch (Exception e)
         {

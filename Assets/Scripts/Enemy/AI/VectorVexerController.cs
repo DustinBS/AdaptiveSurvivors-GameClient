@@ -124,7 +124,7 @@ public class VectorVexerController : MonoBehaviour
     {
         // 1. Find all valid targets
         var brainsToDash = new List<EnemyBrain>();
-        foreach (var enemy in FindObjectsOfType<EnemyBrain>())
+        foreach (var enemy in FindObjectsByType<EnemyBrain>(FindObjectsSortMode.None))
         {
             if (enemy != this.enemyBrain && !enemy.Data.enemyID.Contains("elite"))
             {

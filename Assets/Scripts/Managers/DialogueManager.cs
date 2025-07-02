@@ -106,7 +106,7 @@ public class DialogueManager : MonoBehaviour
     
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        uiController = FindObjectOfType<DialogueUIController>();
+        uiController = FindFirstObjectByType<DialogueUIController>();
 
         if (uiController != null)
         {

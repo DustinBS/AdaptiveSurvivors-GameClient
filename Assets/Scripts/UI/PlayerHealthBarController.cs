@@ -37,7 +37,7 @@ public class PlayerHealthBarController : MonoBehaviour
     void Start()
     {
         // Find the PlayerStatus component in the scene.
-        playerStatus = FindObjectOfType<PlayerStatus>();
+        playerStatus = FindFirstObjectByType<PlayerStatus>();
         if (playerStatus != null)
         {
             // Subscribe to the health changed event.

@@ -178,23 +178,24 @@ public class PlayerExperience : MonoBehaviour
         switch (upgrade.upgradeType)
         {
             case UpgradeType.MaxHealth:
-                // CORRECT: Tell PlayerStatus to handle its own max health increase.
-                playerStatus.IncreaseMaxHealth(upgrade.value);
+                playerStatus.ModifyMaxHealth(upgrade.value, upgrade.isPercentage);
                 break;
 
             case UpgradeType.WeaponDamage:
-                // CORRECT: Tell PlayerAttack to handle its own damage increase.
-                playerAttack.IncreaseDamage(upgrade.value, upgrade.isPercentage);
+                playerAttack.ModifyDamage(upgrade.value, upgrade.isPercentage);
                 break;
 
             case UpgradeType.MoveSpeed:
-                // CORRECT: Tell PlayerMovement to handle its own speed increase.
-                playerMovement.IncreaseMoveSpeed(upgrade.value, upgrade.isPercentage);
+                playerMovement.ModifyMoveSpeed(upgrade.value, upgrade.isPercentage);
+                break;
+
+            case UpgradeType.AttackSpeed:
+                playerAttack.ModifyAttackSpeed(upgrade.value, upgrade.isPercentage);
                 break;
 
             // Add other cases like AttackSpeed, etc. following the same pattern.
             // case UpgradeType.AttackSpeed:
-            //     playerAttack.IncreaseAttackSpeed(upgrade.value, upgrade.isPercentage);
+            //     playerAttack.ModifyAttackSpeed(upgrade.value, upgrade.isPercentage);
             //     break;
 
             default:

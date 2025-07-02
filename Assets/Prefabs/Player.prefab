@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 385707203089080219}
   - component: {fileID: 5721433740506742812}
   - component: {fileID: 2857188902851953441}
+  - component: {fileID: 6703068626198836930}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -68,6 +69,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df7ed6abd1e3ac4ea37c72358ce67f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dashSpeed: 25
+  dashDuration: 0.15
+  dashCooldown: 2
   positionEventThreshold: 0.1
   directionEventThreshold: 0.05
 --- !u!114 &1455772593265856052
@@ -112,6 +116,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bddacd75ac818f408713f0eaa069809, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  armor: 0
   maxMana: 50
   currentMana: 0
   activeBuffs: []
@@ -285,3 +290,15 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: -0.5}
   m_Radius: 2
+--- !u!114 &6703068626198836930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313925311324587010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a58963ccbe97f14ea331f8e8e2be9f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

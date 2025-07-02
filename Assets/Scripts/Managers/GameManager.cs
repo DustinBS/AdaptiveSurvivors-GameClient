@@ -10,7 +10,7 @@ using System.Collections.Generic;
 /// </summary>
 public class GameManager : MonoBehaviour
 {
-    public enum GameState { Playing, Paused, GameOver }
+    public enum GameState { Playing, Paused, GameOver, AwaitingSeer }
 
     // --- Singleton Instance ---
     // Provides easy, static access to the manager from other scripts in the same scene.
@@ -24,6 +24,14 @@ public class GameManager : MonoBehaviour
 
     // The current state of the game. Making it public allows other scripts to check it if needed.
     public GameState CurrentState { get; private set; }
+
+    [Header("Seer System")]
+    [Tooltip("A unique identifier for the current run, sent with Kafka events.")]
+    public string runId { get; private set; }
+    [Tooltip("The Seer encounter will be triggered before waves that are a multiple of this number.")]
+    [SerializeField] private int bossWaveInterval = 3;
+    [Tooltip("The Seer prefab to spawn for the encounter.")]
+    [SerializeField] private GameObject seerPrefab;
 
     [Header("Wave Boss Spawning")]
     [Tooltip("The EnemyData for the special elite to spawn between waves.")]
@@ -39,6 +47,10 @@ public class GameManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
+        // Generate a unique ID for this run. Mostly used for Seer event tracking
+        runId = System.Guid.NewGuid().ToString();
+        Debug.Log($"New run started. Run ID: {runId}");
+
         CurrentState = GameState.Playing;
 
         if (enemySpawner == null)
@@ -77,6 +89,30 @@ public class GameManager : MonoBehaviour
         if (timeElapsed >= currentWave * 10f)
         {
             AdvanceWave();
+        }
+    }
+
+    /// <summary>
+    /// Sets the game state to AwaitingSeer, pausing game progression.
+    /// </summary>
+    public void EnterSeerEncounterState()
+    {
+        if (CurrentState == GameState.Playing)
+        {
+            CurrentState = GameState.AwaitingSeer;
+            Debug.Log("Game state changed to AwaitingSeer.");
+        }
+    }
+
+    /// <summary>
+    /// Sets the game state back to Playing, resuming game progression.
+    /// </summary>
+    public void ExitSeerEncounterState()
+    {
+        if (CurrentState == GameState.AwaitingSeer)
+        {
+            CurrentState = GameState.Playing;
+            Debug.Log("Game state changed back to Playing.");
         }
     }
 
@@ -137,6 +173,46 @@ public class GameManager : MonoBehaviour
     private void AdvanceWave()
     {
         Debug.Log($"Wave {currentWave} complete! Spawning elite boss...");
+        // Check if the next wave is a boss wave to trigger the Seer.
+        if ((currentWave + 1) % bossWaveInterval == 0)
+        {
+            TriggerSeerEncounter();
+        }
+        else
+        {
+            // Spawn normal end-of-wave elite.
+            SpawnWaveEndElite();
+        }
+
+        currentWave++;
+        Debug.Log($"Advancing to Wave {currentWave}!");
+    }
+
+    private void TriggerSeerEncounter()
+    {
+        if (seerPrefab != null)
+        {
+            // Spawn the seer at the center of the screen.
+            Instantiate(seerPrefab, Vector3.zero, Quaternion.identity);
+        }
+        else
+        {
+            Debug.LogError("Seer Prefab is not assigned in GameManager!", this);
+        }
+
+        var payload = new Dictionary<string, object>
+        {
+            { "run_id", this.runId }
+        };
+        KafkaClient.Instance.SendGameplayEvent("seer_encounter_trigger", this.runId, payload);
+
+        // Enter the AwaitingSeer state, which pauses wave progression.
+        EnterSeerEncounterState();
+    }
+
+    private void SpawnWaveEndElite()
+    {
+        Debug.Log("Spawning wave-end elite...");
         if (enemySpawner != null && waveEndElite != null)
         {
             enemySpawner.SpawnSpecialEnemy(waveEndElite);
@@ -145,8 +221,6 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogWarning("Cannot spawn wave end elite. Spawner or elite data is not assigned in GameManager.", this);
         }
-
-        currentWave++;
-        Debug.Log($"Advancing to Wave {currentWave}!");
     }
+
 }

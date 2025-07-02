@@ -75,10 +75,18 @@ public class PlayerMovement : MonoBehaviour
         playerControls.Player.Dash.performed -= OnDashPerformed;
     }
 
-    public void IncreaseMoveSpeed(float value, bool isPercentage)
+    public void ModifyMoveSpeed(float value, bool isPercentage)
     {
         if (isPercentage) { moveSpeed *= (1 + value); }
         else { moveSpeed += value; }
+    }
+
+    public void ModifyDashCooldown(float value, bool isPercentage)
+    {
+        if (isPercentage) { dashCooldown *= (1 + value); }
+        else { dashCooldown += value; }
+        // Ensure cooldown doesn't go below a minimum threshold.
+        if (dashCooldown < 0.1f) dashCooldown = 0.1f;
     }
 
     private void OnMovePerformed(InputAction.CallbackContext context)

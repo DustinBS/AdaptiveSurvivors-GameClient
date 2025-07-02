@@ -15,6 +15,9 @@ public class PlayerStatus : MonoBehaviour
     public float maxHealth { get; private set; }
     public float currentHealth { get; private set; }
 
+    [Tooltip("Reduces incoming damage by a flat percentage. 0.1 = 10% reduction.")]
+    public float armor = 0f;
+
     public float maxMana = 50f;
     public float currentMana;
     public List<string> activeBuffs = new List<string>();
@@ -81,19 +84,45 @@ public class PlayerStatus : MonoBehaviour
     // --- Public API for Health & Damage ---
 
     /// <summary>
-    /// Increases the player's maximum health and heals for the same amount.
-    /// This is the definitive method for handling 'MaxHealth' upgrades.
+    /// Modifies the player's maximum health by a flat amount or percentage.
+    /// Also heals the player by the amount of max health gained.
     /// </summary>
-    /// <param name="amount">The amount to increase max health by.</param>
-    public void IncreaseMaxHealth(float amount)
+    public void ModifyMaxHealth(float amount, bool isPercentage)
     {
-        if (isDead || amount <= 0) return;
+        if (isDead) return;
 
-        maxHealth += amount;
-        Heal(amount); // Also heal the player for the amount gained.
+        float changeAmount;
+        if (isPercentage)
+        {
+            changeAmount = maxHealth * amount;
+        }
+        else
+        {
+            changeAmount = amount;
+        }
 
-        // The OnHealthChanged event is invoked by Heal(), so no need to call it twice.
-        Debug.Log($"Max Health increased by {amount}. New Max Health: {maxHealth}");
+        maxHealth += changeAmount;
+        if (changeAmount > 0)
+        {
+            Heal(changeAmount); // Heal for positive changes.
+        }
+        else
+        {
+            // If max health is reduced, ensure current health isn't higher than the new max.
+            if (currentHealth > maxHealth)
+            {
+                currentHealth = maxHealth;
+                OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            }
+        }
+    }
+
+    public void ModifyArmor(float amount)
+    {
+        if (isDead) return;
+        armor += amount;
+        // Clamp armor between 0% and a max of 90% reduction.
+        armor = Mathf.Clamp(armor, 0f, 0.9f);
     }
 
     public void TakeDamage(float amount, string sourceEnemyId = "unknown_enemy")
@@ -101,7 +130,10 @@ public class PlayerStatus : MonoBehaviour
         // Prevent taking damage if already dead.
         if (isDead) return;
 
-        currentHealth -= amount;
+        float finalDamage = amount * (1 - armor);
+        if (finalDamage < 0) finalDamage = 0;
+
+        currentHealth -= finalDamage;
         if (currentHealth < 0) currentHealth = 0;
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);

@@ -34,7 +34,7 @@ public class PlayerAttack : MonoBehaviour
 
     void Awake()
     {
-        kafkaClient = FindObjectOfType<KafkaClient>();
+        kafkaClient = FindFirstObjectByType<KafkaClient>();
     }
 
     void Update()
@@ -47,10 +47,33 @@ public class PlayerAttack : MonoBehaviour
         }
     }
 
-    public void IncreaseDamage(float value, bool isPercentage)
+    public void ModifyDamage(float value, bool isPercentage)
     {
-        currentDamage *= (isPercentage) ? (1 + value) : 1;
-        currentDamage += (isPercentage) ? 0 : value;
+        if (isPercentage)
+        {
+            currentDamage *= (1 + value);
+        }
+        else
+        {
+            currentDamage += value;
+        }
+    }
+
+    public void ModifyAttackSpeed(float value, bool isPercentage)
+    {
+        // Note: We modify the *interval*. A positive 'speed' modifier should *decrease* the interval.
+        if (isPercentage)
+        {
+            currentWeapon.attackInterval /= (1 + value);
+        }
+        else
+        {
+            // For flat speed, it's harder to define, so we'll treat it as percentage.
+            // This can be adjusted if flat speed reduction is desired.
+            currentWeapon.attackInterval /= (1 + value);
+        }
+        // Ensure interval doesn't go below a minimum threshold.
+        if (currentWeapon.attackInterval < 0.05f) currentWeapon.attackInterval = 0.05f;
     }
 
     private void PerformAttack()
