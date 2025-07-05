@@ -20,3 +20,4 @@ MonoBehaviour:
   attackStrategy: {fileID: 11400000, guid: 4a0637ee62a85404886d2b9d1e97abd9, type: 2}
   visualPrefab: {fileID: 163821962052374314, guid: 730a3f065432473488b93945c35c6d74, type: 3}
   isExemptFromClearanceChecks: 1
+  isElite: 1
