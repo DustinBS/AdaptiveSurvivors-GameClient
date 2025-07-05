@@ -100,6 +100,7 @@ public class PlayerAttack : MonoBehaviour
             {
                 // Directly damage the enemy and pass the 'isProjectile' flag.
                 enemyHealth.TakeDamage(this.currentDamage, currentWeapon.weaponID, currentWeapon.isProjectile);
+                SendDamageDealtEvent(this.currentDamage, enemyHealth.EnemyType);
             }
         }
     }
@@ -122,6 +123,18 @@ public class PlayerAttack : MonoBehaviour
             }
         }
         return nearest;
+    }
+
+    private void SendDamageDealtEvent(float damageAmount, string enemyType)
+    {
+        if (kafkaClient == null) return;
+        var payload = new Dictionary<string, object>
+        {
+            { "dmg_amount", damageAmount },
+            { "enemy_type", enemyType },
+            { "is_projectile", false }
+        };
+        kafkaClient.SendGameplayEvent("player_damage_dealt_event", this.playerId, payload);
     }
 
     void OnDrawGizmosSelected()

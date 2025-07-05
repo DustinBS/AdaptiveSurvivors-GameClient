@@ -38,4 +38,7 @@ public class EnemyData : ScriptableObject
     [Header("Behavioral Flags")]
     [Tooltip("If true, this enemy does not need to be killed for no enemy checks for events like the Seer encounter to begin. It will be despawned automatically.")]
     public bool isExemptFromClearanceChecks = false;
+
+    [Tooltip("If true, this enemy is considered an 'Elite' for gameplay and data tracking purposes.")]
+    public bool isElite = false;
 }

@@ -11,7 +11,7 @@ using System;
 /// </summary>
 public class PlayerStatus : MonoBehaviour
 {
-    private string playerId;
+    public string playerId { get; private set; }
     public float maxHealth { get; private set; }
     public float currentHealth { get; private set; }
 
@@ -125,9 +125,14 @@ public class PlayerStatus : MonoBehaviour
         armor = Mathf.Clamp(armor, 0f, 0.9f);
     }
 
-    public void TakeDamage(float amount, string sourceEnemyId = "unknown_enemy")
+    /// <summary>
+    /// Reduces player health and sends a Kafka event detailing the damage taken.
+    /// </summary>
+    /// <param name="amount">The raw amount of damage dealt.</param>
+    /// <param name="sourceEnemyId">The ID of the enemy that dealt the damage.</param>
+    /// <param name="isSourceElite">A flag indicating if the damage source is an elite.</param>
+    public void TakeDamage(float amount, string sourceEnemyId, bool isSourceElite)
     {
-        // Prevent taking damage if already dead.
         if (isDead) return;
 
         float finalDamage = amount * (1 - armor);
@@ -135,6 +140,8 @@ public class PlayerStatus : MonoBehaviour
 
         currentHealth -= finalDamage;
         if (currentHealth < 0) currentHealth = 0;
+
+        SendDamageTakenEvent(finalDamage, sourceEnemyId, isSourceElite);
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
@@ -193,11 +200,26 @@ public class PlayerStatus : MonoBehaviour
         var payload = new Dictionary<string, object>
         {
             { "hp", currentHealth },
+            { "max_hp", maxHealth },
+            { "armor", armor },
+            { "max_mana", maxMana },
             { "mana", currentMana },
             { "active_buffs", activeBuffs.ToList() },
             { "active_debuffs", activeDebuffs.ToList() }
         };
 
         kafkaClient.SendGameplayEvent("player_status_event", playerId, payload);
+    }
+
+    private void SendDamageTakenEvent(float damageAmount, string enemyId, bool isElite)
+    {
+        if (kafkaClient == null) return;
+        var payload = new Dictionary<string, object>
+        {
+            { "dmg_amount", damageAmount },
+            { "source_enemy_id", enemyId },
+            { "is_elite_source", isElite }
+        };
+        kafkaClient.SendGameplayEvent("player_damage_taken_event", this.playerId, payload);
     }
 }

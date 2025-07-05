@@ -1,6 +1,7 @@
 // GameClient/Assets/Scripts/Player/Projectile.cs
 
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Controls the behavior of a projectile fired by the player.
@@ -21,12 +22,21 @@ public class Projectile : MonoBehaviour
     private float damage;
     private bool isProjectileFlag;
     private Rigidbody2D rb;
+    private KafkaClient kafkaClient;
+    private string playerId;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         // Ensure the projectile's collider is a trigger so it doesn't physically push enemies.
         GetComponent<Collider2D>().isTrigger = true;
+        kafkaClient = KafkaClient.Instance;
+        var player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null && player.TryGetComponent<PlayerStatus>(out var status))
+        {
+            this.playerId = status.playerId;
+        }
+
     }
 
     /// <summary>
@@ -51,9 +61,8 @@ public class Projectile : MonoBehaviour
 
         if (other.TryGetComponent<EnemyHealth>(out var enemyHealth))
         {
-            // The weaponID is no longer strictly necessary here, but we pass it for consistency.
-            // The isProjectileFlag is the crucial piece of information.
             enemyHealth.TakeDamage(this.damage, "projectile_hit", this.isProjectileFlag);
+            SendDamageDealtEvent(this.damage, enemyHealth.EnemyType);
         }
 
         // Create a visual effect at the impact point, if one is assigned.
@@ -64,5 +73,17 @@ public class Projectile : MonoBehaviour
 
         // Destroy the projectile on impact.
         Destroy(gameObject);
+    }
+
+    private void SendDamageDealtEvent(float damageAmount, string enemyType)
+    {
+        if (kafkaClient == null) return;
+        var payload = new Dictionary<string, object>
+        {
+            { "dmg_amount", damageAmount },
+            { "enemy_type", enemyType },
+            { "is_projectile", true }
+        };
+        kafkaClient.SendGameplayEvent("player_damage_dealt_event", this.playerId, payload);
     }
 }
