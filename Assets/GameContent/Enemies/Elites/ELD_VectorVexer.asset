@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9ad4c174c42c3c4418a4a61799091f49, type: 3}
-  m_Name: ED_VectorVexer
+  m_Script: {fileID: 11500000, guid: 3b59fb71216a4b041a4ab02e36511715, type: 3}
+  m_Name: ELD_VectorVexer
   m_EditorClassIdentifier: 
   enemyID: elite_vector_vexer
   enemyName: Vector Vexer

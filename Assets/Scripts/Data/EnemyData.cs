@@ -10,12 +10,21 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewEnemyData", menuName = "Adaptive Survivors/Enemy Data")]
 public class EnemyData : ScriptableObject
 {
+    /// <summary>
+    /// Defines the boss archetype for data tracking and gameplay mechanics.
+    /// Set to 'None' for non-boss or non-archetype enemies.
+    /// </summary>
+    public enum BossArchetype { None, Melee, Ranged, Final }
+
     [Header("Core Identification")]
     [Tooltip("A unique identifier for this enemy type (e.g., 'goblin_grunt', 'orc_brute'). Used for backend event tracking.")]
     public string enemyID;
 
     [Tooltip("Display name for the enemy, used in UI or logs.")]
     public string enemyName;
+
+    [Tooltip("The archetype of this enemy, used for ML data categorization.")]
+    public BossArchetype archetype = BossArchetype.None;
 
     [Header("Core Stats")]
     [Tooltip("The base health of the enemy.")]
@@ -38,7 +47,4 @@ public class EnemyData : ScriptableObject
     [Header("Behavioral Flags")]
     [Tooltip("If true, this enemy does not need to be killed for no enemy checks for events like the Seer encounter to begin. It will be despawned automatically.")]
     public bool isExemptFromClearanceChecks = false;
-
-    [Tooltip("If true, this enemy is considered an 'Elite' for gameplay and data tracking purposes.")]
-    public bool isElite = false;
 }
