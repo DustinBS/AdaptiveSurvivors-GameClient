@@ -12,5 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a72c792e811e03e43b9f8a9a03f1fb12, type: 3}
   m_Name: PlayerData
   m_EditorClassIdentifier: 
-  playerName: Survivor
-  playerPortrait: {fileID: 1979232534141036308, guid: ebe36b10ffd7547418d970a219dc67b6, type: 3}
+  playerID: player_001
+  characterData: {fileID: 11400000, guid: df28ff5500d78f745a8b6957c05841d5, type: 2}
+  currentHealth: 70
+  currentDamage: 7

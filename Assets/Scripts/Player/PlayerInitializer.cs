@@ -65,14 +65,14 @@ public class PlayerInitializer : MonoBehaviour
         var movement = GetComponent<PlayerMovement>();
         var attack = GetComponent<PlayerAttack>();
         var experience = GetComponent<PlayerExperience>();
+        string authoritativePlayerId = playerData.playerID;
 
         // Call the Initialize methods on each component with the final character data.
-        status.Initialize(characterToLoad);
-        movement.Initialize(characterToLoad);
-        attack.Initialize(characterToLoad);
-        experience.Initialize(characterToLoad);
+        status.Initialize(characterToLoad, authoritativePlayerId);
+        movement.Initialize(characterToLoad, authoritativePlayerId);
+        attack.Initialize(characterToLoad, authoritativePlayerId);
+        experience.Initialize(characterToLoad, authoritativePlayerId);
 
-        Debug.Log($"Player initialized successfully with character: {characterToLoad.characterName}");
-
+        Debug.Log($"Player initialized successfully with Player ID: {authoritativePlayerId} and Character: {characterToLoad.characterName}");
     }
 }

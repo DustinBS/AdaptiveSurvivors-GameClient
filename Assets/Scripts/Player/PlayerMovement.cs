@@ -45,9 +45,9 @@ public class PlayerMovement : MonoBehaviour
     private bool isDashing = false;
     private float lastDashTime = -Mathf.Infinity;
 
-    public void Initialize(CharacterData data)
+    public void Initialize(CharacterData data, string newPlayerId)
     {
-        this.playerId = data.characterName;
+        this.playerId = newPlayerId;
         this.moveSpeed = BASE_MOVE_SPEED * data.speedMultiplier;
     }
 

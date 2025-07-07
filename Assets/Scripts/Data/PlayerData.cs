@@ -11,6 +11,10 @@ using System.Collections.Generic;
 [CreateAssetMenu(fileName = "PlayerData", menuName = "Adaptive Survivors/Player Data")]
 public class PlayerData : ScriptableObject
 {
+    [Header("Player Identity")]
+    [Tooltip("The persistent, unique identifier for this player profile.")]
+    [ReadOnly] public string playerID; // Use a custom ReadOnly attribute for safety in Inspector
+
     [Header("Character Choice")]
     [Tooltip("The base character data selected for the current run. This is set by the Character Selection screen.")]
     public CharacterData characterData;
@@ -26,6 +30,34 @@ public class PlayerData : ScriptableObject
     [Header("Historical Stats")]
     [Tooltip("Persistent, lifetime statistics for this player profile.")]
     public Dictionary<string, long> historicalStats = new Dictionary<string, long>();
+
+    private const string PLAYER_ID_PREFS_KEY = "player_id";
+
+    /// <summary>
+    /// Ensures a persistent player ID exists. If not, creates one and saves it.
+    /// This should be called once when the game starts.
+    /// </summary>
+    public void EnsurePlayerID()
+    {
+        if (!string.IsNullOrEmpty(playerID)) return;
+
+        // Try to load the ID from PlayerPrefs first.
+        string savedID = PlayerPrefs.GetString(PLAYER_ID_PREFS_KEY, null);
+
+        if (!string.IsNullOrEmpty(savedID))
+        {
+            playerID = savedID;
+            Debug.Log($"Loaded existing Player ID: {playerID}");
+        }
+        else
+        {
+            // If no ID exists, generate a new one and save it.
+            playerID = System.Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(PLAYER_ID_PREFS_KEY, playerID);
+            PlayerPrefs.Save();
+            Debug.Log($"Generated and saved new Player ID: {playerID}");
+        }
+    }
 
     /// <summary>
     /// Initializes the player's stats for the start of a new run based on the selected character.
@@ -68,4 +100,18 @@ public class PlayerData : ScriptableObject
         historicalStats[statKey] += amount;
     }
 
+    [ContextMenu("Clear Saved Player ID from PlayerPrefs")]
+    public void ClearPlayerIDFromPrefs()
+    {
+        if (PlayerPrefs.HasKey(PLAYER_ID_PREFS_KEY))
+        {
+            PlayerPrefs.DeleteKey(PLAYER_ID_PREFS_KEY);
+            PlayerPrefs.Save();
+            Debug.Log($"[Editor Tool] Cleared saved Player ID ('{PLAYER_ID_PREFS_KEY}') from PlayerPrefs.");
+        }
+        else
+        {
+            Debug.Log($"[Editor Tool] No Player ID found in PlayerPrefs to clear.");
+        }
+    }
 }

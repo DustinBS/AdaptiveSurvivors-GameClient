@@ -15,9 +15,9 @@ public class PlayerAttack : MonoBehaviour
     private float currentDamage;
     private KafkaClient kafkaClient;
 
-    public void Initialize(CharacterData data)
+    public void Initialize(CharacterData data, string newPlayerId)
     {
-        this.playerId = data.characterName;
+        this.playerId = newPlayerId;
         this.currentWeapon = data.startingWeapon;
         this.currentDamage = data.baseDamage;
 
@@ -90,8 +90,8 @@ public class PlayerAttack : MonoBehaviour
                 return;
             }
             Vector2 direction = (nearestEnemy.transform.position - transform.position).normalized;
-            Projectile projectile = Instantiate(currentWeapon.projectilePrefab, transform.position, Quaternion.identity).GetComponent<Projectile>();
-            projectile.Initialize(direction, this.currentDamage, currentWeapon.isProjectile);
+            PlayerProjectile projectile = Instantiate(currentWeapon.projectilePrefab, transform.position, Quaternion.identity).GetComponent<PlayerProjectile>();
+            projectile.Initialize(direction, this.currentDamage, currentWeapon.isProjectile, this.playerId);
         }
         else
         {
@@ -99,7 +99,7 @@ public class PlayerAttack : MonoBehaviour
             if (nearestEnemy.TryGetComponent<EnemyHealth>(out var enemyHealth))
             {
                 // Directly damage the enemy and pass the 'isProjectile' flag.
-                enemyHealth.TakeDamage(this.currentDamage, currentWeapon.weaponID, currentWeapon.isProjectile);
+                enemyHealth.TakeDamage(this.currentDamage, currentWeapon.weaponID, currentWeapon.isProjectile, this.playerId);
                 SendDamageDealtEvent(this.currentDamage, enemyHealth.EnemyType);
             }
         }

@@ -1,4 +1,4 @@
-// GameClient/Assets/Scripts/Player/Projectile.cs
+// GameClient/Assets/Scripts/Player/PlayerProjectile.cs
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 /// and destroys itself after a set time or on impact.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
-public class Projectile : MonoBehaviour
+public class PlayerProjectile : MonoBehaviour
 {
     [Header("Projectile Settings")]
     [Tooltip("The speed at which the projectile travels.")]
@@ -31,21 +31,16 @@ public class Projectile : MonoBehaviour
         // Ensure the projectile's collider is a trigger so it doesn't physically push enemies.
         GetComponent<Collider2D>().isTrigger = true;
         kafkaClient = KafkaClient.Instance;
-        var player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null && player.TryGetComponent<PlayerStatus>(out var status))
-        {
-            this.playerId = status.playerId;
-        }
-
     }
 
     /// <summary>
     /// Initializes the projectile with its damage, direction, and damage type.
     /// </summary>
-    public void Initialize(Vector2 direction, float projDamage, bool isProj)
+    public void Initialize(Vector2 direction, float projDamage, bool isProj, string ownerPlayerId)
     {
         this.damage = projDamage;
         this.isProjectileFlag = isProj;
+        this.playerId = ownerPlayerId; // Set the ID from the creator
 
         // Set the projectile in motion
         rb.linearVelocity = direction.normalized * speed;
@@ -61,7 +56,7 @@ public class Projectile : MonoBehaviour
 
         if (other.TryGetComponent<EnemyHealth>(out var enemyHealth))
         {
-            enemyHealth.TakeDamage(this.damage, "projectile_hit", this.isProjectileFlag);
+            enemyHealth.TakeDamage(this.damage, "projectile_hit", this.isProjectileFlag, this.playerId);
             SendDamageDealtEvent(this.damage, enemyHealth.EnemyType);
         }
 

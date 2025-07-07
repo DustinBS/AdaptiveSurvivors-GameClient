@@ -44,12 +44,13 @@ public class PlayerStatus : MonoBehaviour
     private bool isDead = false;
 
     // The Initialize method, called by PlayerInitializer
-    public void Initialize(CharacterData data)
+    public void Initialize(CharacterData data, string newPlayerId)
     {
-        this.playerId = data.characterName;
+        this.playerId = newPlayerId;
         this.maxHealth = data.baseHealth;
-        this.currentHealth = this.maxHealth; // Start with full health
+        this.currentHealth = this.maxHealth;
     }
+
 
     void Awake()
     {

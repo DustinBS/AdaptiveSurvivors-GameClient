@@ -32,6 +32,10 @@ public class VectorVexerController : MonoBehaviour
     private Vector2 randomFallbackPrediction;
     private Vector2? lastKafkaPrediction = null;
 
+    [Header("Data References")]
+    [Tooltip("Reference to the PlayerData asset to get the Player ID.")]
+    [SerializeField] private PlayerData playerData;
+
     private readonly List<Vector2> cardinalDirections = new List<Vector2>
     {
         Vector2.up, Vector2.down, Vector2.left, Vector2.right
@@ -54,6 +58,11 @@ public class VectorVexerController : MonoBehaviour
         enemyBrain.OnInitialized += HandleBrainInitialized;
         PlayerMovement.OnPlayerDashed += OnPlayerDashed;
         KafkaClient.OnAdaptiveMessageReceived += OnAdaptiveMessageReceived;
+        if (playerData == null)
+        {
+            Debug.LogError("VectorVexerController: PlayerData reference is not set in the Inspector!", this);
+            enabled = false;
+        }
     }
 
     void OnDisable()
@@ -214,13 +223,14 @@ public class VectorVexerController : MonoBehaviour
             }
         }
 
-        // Destroy all marked enemies, awarding XP via the TakeDamage flow
+        string attackerId = playerData.playerID;
+
         foreach (var enemy in squishedEnemies)
         {
             if (enemy != null && enemy.Health != null)
             {
-                // Reuses existing death logic to grant XP, etc.
-                enemy.Health.TakeDamage(enemy.Health.maxHealth, "vexer_squish", false);
+                // Pass the attackerId to attribute the kill correctly.
+                enemy.Health.TakeDamage(enemy.Health.maxHealth, "vexer_squish", false, attackerId);
             }
         }
     }

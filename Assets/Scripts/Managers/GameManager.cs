@@ -124,6 +124,12 @@ public class GameManager : MonoBehaviour
     {
         if (CurrentState == GameState.GameOver) return;
 
+        // Check if the player died during the boss fight to record the loss.
+        if (CurrentState == GameState.BossEncounter)
+        {
+            SendBossFightCompletedEvent(false); // `false` for loss
+        }
+
         CurrentState = GameState.GameOver;
         ProcessEndOfRunStatistics();
         StartCoroutine(ShowDeathMenuAfterDelay(1.5f));
@@ -281,9 +287,37 @@ public class GameManager : MonoBehaviour
         // Check if the defeated enemy was a boss and if we are in the boss encounter state.
         if (CurrentState == GameState.BossEncounter && defeatedEnemyData is BossData)
         {
+            SendBossFightCompletedEvent(true); // `true` for win
+
             Debug.Log($"Boss {defeatedEnemyData.enemyName} defeated! Resuming game.");
             CurrentState = GameState.Playing;
             enemySpawner.StartSpawning(); // Resume normal wave spawning.
         }
+    }
+
+    private void SendBossFightCompletedEvent(bool didPlayerWin)
+    {
+        if (KafkaClient.Instance == null)
+        {
+            Debug.LogWarning("KafkaClient instance not found, cannot send boss_fight_completed event.");
+            return;
+        }
+
+        var payload = new Dictionary<string, object>
+        {
+            { "run_id", this.runId },
+            { "encounter_id", this.seerEncounterCounter - 1 },
+            { "outcome", didPlayerWin ? "win" : "loss" }
+        };
+
+        if (playerData == null || string.IsNullOrEmpty(playerData.playerID))
+        {
+            Debug.LogError("PlayerData or PlayerID is not set. Cannot send boss_fight_completed event.", this);
+            return;
+        }
+        string playerId = playerData.playerID;
+
+        KafkaClient.Instance.SendGameplayEvent("boss_fight_completed", playerId, payload);
+        Debug.Log($"Sent boss_fight_completed event. Outcome: {(didPlayerWin ? "win" : "loss")}");
     }
 }

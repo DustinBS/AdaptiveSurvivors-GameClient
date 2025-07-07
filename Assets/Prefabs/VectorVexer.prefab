@@ -196,3 +196,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   abilityCooldown: 5
   wrongPredictionThreshold: 3
+  squishRadius: 0.5
+  playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}

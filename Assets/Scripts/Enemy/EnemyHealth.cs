@@ -35,7 +35,7 @@ public class EnemyHealth : MonoBehaviour
 
     // --- Private Fields ---
     private KafkaClient kafkaClient;
-    private string playerId = "player_001";
+    private string lastAttackingPlayerId; // To remember who gets credit for the kill
     private AdaptiveEnemy adaptiveComponent;
     private EnemyData enemyData;
 
@@ -57,9 +57,11 @@ public class EnemyHealth : MonoBehaviour
         xpValue = data.xpValue;
     }
 
-    public void TakeDamage(float amount, string sourceWeaponId, bool isProjectile)
+    public void TakeDamage(float amount, string sourceWeaponId, bool isProjectile, string attackerPlayerId)
     {
         if (!enabled || currentHealth <= 0) return;
+
+        this.lastAttackingPlayerId = attackerPlayerId; // Remember the last attacker
 
         float finalDamage = amount;
 
@@ -94,7 +96,7 @@ public class EnemyHealth : MonoBehaviour
             { "source_weapon_id", weaponId },
             { "is_projectile", isProjectile }
         };
-        kafkaClient.SendGameplayEvent("damage_taken_event", playerId, payload);
+        kafkaClient.SendGameplayEvent("damage_taken_event", this.lastAttackingPlayerId, payload);
     }
 
     private void SendEnemyDeathEvent(string killingWeaponId)
@@ -112,6 +114,6 @@ public class EnemyHealth : MonoBehaviour
             { "position", new Dictionary<string, float> { { "x", transform.position.x }, { "y", transform.position.y } } },
             { "velocity", new Dictionary<string, float> { { "vx", finalVelocity.x }, { "vy", finalVelocity.y } } }
         };
-        kafkaClient.SendGameplayEvent("enemy_death_event", playerId, payload);
+        kafkaClient.SendGameplayEvent("enemy_death_event", this.lastAttackingPlayerId, payload);
     }
 }

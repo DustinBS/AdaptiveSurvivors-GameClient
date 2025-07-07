@@ -36,9 +36,9 @@ public class PlayerExperience : MonoBehaviour
     public event Action<float, float> OnXPChanged;
 
     // The Initialize method, called by PlayerInitializer
-    public void Initialize(CharacterData data)
+    public void Initialize(CharacterData data, string newPlayerId)
     {
-        this.playerId = data.characterName;
+        this.playerId = newPlayerId;
         this.numberOfUpgradeChoices = data.defaultUpgradeChoices + data.extraUpgradeChoices;
     }
 
