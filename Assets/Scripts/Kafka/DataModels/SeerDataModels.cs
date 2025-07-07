@@ -45,6 +45,7 @@ public class BargainChoice
 public class SeerResultPayload
 {
     public string playerId;
+    public string encounterId;
     public string dialogue;
     public List<BargainChoice> choices;
 }

@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: ebb59b80d200e3f4f921d6dafe1fb52c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - minionToSpawn: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

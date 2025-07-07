@@ -19,5 +19,5 @@ MonoBehaviour:
   xpValue: 1000
   movementStrategy: {fileID: 11400000, guid: 4c982349182111142b11d884a77a9624, type: 2}
   attackStrategy: {fileID: 11400000, guid: e6f78d19d91245a4eb1fd119120600dc, type: 2}
-  visualPrefab: {fileID: 0}
+  visualPrefab: {fileID: 428337284618525402, guid: db0e4accf55893f49ab66a91b541bffc, type: 3}
   isExemptFromClearanceChecks: 0

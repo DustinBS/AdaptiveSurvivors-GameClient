@@ -11,10 +11,8 @@ using System.Collections.Generic;
 /// </summary>
 public class GameManager : MonoBehaviour
 {
-    public enum GameState { Playing, Paused, GameOver, AwaitingSeer, SeerEncounter }
+    public enum GameState { Playing, Paused, GameOver, AwaitingSeer, SeerEncounter, BossEncounter }
 
-    // --- Singleton Instance ---
-    // Provides easy, static access to the manager from other scripts in the same scene.
     public static GameManager Instance { get; private set; }
 
     [Header("Game State")]
@@ -31,14 +29,16 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int bossWaveInterval = 3;
     [SerializeField] private GameObject seerPrefab;
     private bool isSeerEncounterQueued = false;
+    private int seerEncounterCounter = 0;
 
     [Header("Wave Boss Spawning")]
     [Tooltip("The EnemyData for the special elite to spawn between waves.")]
     [SerializeField] private EnemyData waveEndElite;
     [Tooltip("Reference to the scene's EnemySpawner component.")]
     [SerializeField] private EnemySpawner enemySpawner;
+    [Tooltip("The BossData for the next boss encounter.")]
+    [SerializeField] private BossData nextBossToSpawn;
 
-    // to update historical stats.
     [Header("Data References")]
     [SerializeField] private PlayerData playerData;
 
@@ -66,6 +66,7 @@ public class GameManager : MonoBehaviour
         // Subscribe to the static OnPlayerDeath event when this manager is enabled.
         PlayerStatus.OnPlayerDeath += HandlePlayerDeath;
         EnemySpawner.OnAllEnemiesCleared += HandleAllEnemiesCleared;
+        EnemyHealth.OnEnemyDefeated += HandleEnemyDefeated;
     }
 
     void OnDisable()
@@ -73,6 +74,7 @@ public class GameManager : MonoBehaviour
         // ALWAYS unsubscribe from static events on disable/destroy to prevent memory leaks.
         PlayerStatus.OnPlayerDeath -= HandlePlayerDeath;
         EnemySpawner.OnAllEnemiesCleared -= HandleAllEnemiesCleared;
+        EnemyHealth.OnEnemyDefeated -= HandleEnemyDefeated;
     }
 
     void Update()
@@ -106,16 +108,12 @@ public class GameManager : MonoBehaviour
         DespawnAllVexers();
     }
 
-    /// <summary>
-    /// Sets the game state back to Playing, resuming game progression.
-    /// </summary>
     public void ExitSeerEncounterState()
     {
         if (CurrentState == GameState.SeerEncounter)
         {
-            CurrentState = GameState.Playing;
-            Debug.Log("Game state changed back to Playing.");
-            enemySpawner.StartSpawning();
+            // Instead of returning to 'Playing', we now trigger the boss fight.
+            StartBossEncounter();
         }
     }
 
@@ -241,11 +239,51 @@ public class GameManager : MonoBehaviour
     {
         if (seerPrefab != null)
         {
-            Instantiate(seerPrefab, Vector3.zero, Quaternion.identity);
+            // Instantiate the Seer and keep a reference to its GameObject
+            GameObject seerObject = Instantiate(seerPrefab, Vector3.zero, Quaternion.identity);
+
+            // Get the controller component and initialize it with the current encounter ID
+            if (seerObject.TryGetComponent<SeerController>(out var seerController))
+            {
+                seerController.Initialize(seerEncounterCounter.ToString());
+                seerEncounterCounter++; // Increment the counter for the next Seer
+            }
+            else
+            {
+                Debug.LogError("Spawned Seer Prefab is missing a SeerController component!");
+            }
         }
         else
         {
             Debug.LogError("Seer Prefab is not assigned in GameManager!");
+        }
+    }
+
+
+    private void StartBossEncounter()
+    {
+        CurrentState = GameState.BossEncounter;
+        Debug.Log($"Game state changed to BossEncounter. Spawning boss: {nextBossToSpawn.enemyName}");
+
+        if (enemySpawner != null && nextBossToSpawn != null)
+        {
+            enemySpawner.StopSpawning(); // Ensure no fodder enemies are spawning.
+            enemySpawner.SpawnSpecialEnemy(nextBossToSpawn);
+        }
+        else
+        {
+            Debug.LogError("Cannot start boss encounter. Spawner or BossData is not assigned in GameManager.", this);
+        }
+    }
+
+    private void HandleEnemyDefeated(EnemyData defeatedEnemyData)
+    {
+        // Check if the defeated enemy was a boss and if we are in the boss encounter state.
+        if (CurrentState == GameState.BossEncounter && defeatedEnemyData is BossData)
+        {
+            Debug.Log($"Boss {defeatedEnemyData.enemyName} defeated! Resuming game.");
+            CurrentState = GameState.Playing;
+            enemySpawner.StartSpawning(); // Resume normal wave spawning.
         }
     }
 }

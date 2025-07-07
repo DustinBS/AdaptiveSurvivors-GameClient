@@ -120,7 +120,7 @@ public class EnemyBrain : MonoBehaviour
         movementStrategy.Execute(this);
     }
 
-    private void Update()
+    protected virtual void Update()
     {
         if (!isInitialized || attackStrategy == null) return;
         attackStrategy.Execute(this);

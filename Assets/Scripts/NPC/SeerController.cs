@@ -19,9 +19,16 @@ public class SeerController : MonoBehaviour, IInteractable
     private SeerUIController uiInstance; // A reference to the UI we instantiate.
 
     // --- State ---
+    private string encounterId; // Use string for GUIDs or other formats
     private SeerResultPayload cachedSeerPayload;
-    private bool isReadyForInteraction = false;
+    private bool hasResultBeenReceived = false;
     private bool isEncounterActive = false;
+
+    public void Initialize(string id)
+    {
+        this.encounterId = id;
+        Debug.Log($"Seer Controller initialized for encounter ID: {encounterId}");
+    }
 
     void Start()
     {
@@ -57,22 +64,32 @@ public class SeerController : MonoBehaviour, IInteractable
 
     private void HandleSeerResult(SeerResultPayload payload)
     {
-        Debug.Log("SeerController received data from Kafka. Caching payload and awaiting interaction.");
+        // Ignore messages not intended for this specific encounter
+        if (payload.encounterId != this.encounterId)
+        {
+            Debug.Log($"SeerController ignoring stale message for encounter {payload.encounterId}. Current is {this.encounterId}.");
+            return;
+        }
+
+        Debug.Log($"SeerController received data for encounter {this.encounterId}.");
         cachedSeerPayload = payload;
-        isReadyForInteraction = true;
+        hasResultBeenReceived = true;
+
+        // If the UI is already open, update it with the new data immediately.
+        if (isEncounterActive && uiInstance != null)
+        {
+            uiInstance.UpdateWithBargains(cachedSeerPayload.dialogue, cachedSeerPayload.choices);
+        }
     }
 
     public void Interact()
     {
-        if (!isReadyForInteraction || isEncounterActive) return;
+        if (isEncounterActive) return;
 
         isEncounterActive = true;
-        Debug.Log("Player interacted with Seer. Switching to UI controls and displaying bargain UI.");
-
-        // 1. Switch player input to the UI map for consistency.
+        Debug.Log("Player interacted with Seer. Displaying UI immediately.");
         PlayerInputManager.Instance.SwitchToUIControls();
 
-        // 2. Instantiate the UI from the prefab.
         if (seerUiPrefab == null)
         {
             Debug.LogError("Seer UI Prefab is not assigned in SeerController!");
@@ -89,15 +106,28 @@ public class SeerController : MonoBehaviour, IInteractable
             return;
         }
 
-        // 3. Subscribe to the UI's event and populate it with data.
+        // Subscribe to the UI's event
         uiInstance.OnBargainSelected += HandleBargainSelected;
-        uiInstance.DisplayEncounter(cachedSeerPayload.dialogue, cachedSeerPayload.choices);
+
+        // Check if we ALREADY have the data vs. needing to wait
+        if (hasResultBeenReceived)
+        {
+            uiInstance.UpdateWithBargains(cachedSeerPayload.dialogue, cachedSeerPayload.choices);
+        }
+        else
+        {
+            uiInstance.DisplayInitialState("The strands of fate are swirling... what choice will you make?");
+        }
     }
 
     private void HandleBargainSelected(BargainChoice choice)
     {
-        playerBargainController?.ApplyBargainEffects(choice.buffs);
-        playerBargainController?.ApplyBargainEffects(choice.debuffs);
+        // choice will be null if the player picks the "no bargain" option
+        if (choice != null)
+        {
+            playerBargainController?.ApplyBargainEffects(choice.buffs);
+            playerBargainController?.ApplyBargainEffects(choice.debuffs);
+        }
 
         StartCoroutine(DespawnRoutine());
     }
@@ -112,8 +142,6 @@ public class SeerController : MonoBehaviour, IInteractable
 
     private IEnumerator DespawnRoutine()
     {
-        isReadyForInteraction = false;
-
         // Destroy the UI instance immediately.
         if (uiInstance != null)
         {
@@ -136,8 +164,8 @@ public class SeerController : MonoBehaviour, IInteractable
 
     public string GetInteractionPrompt()
     {
-        // Only show a prompt if the data has arrived from the backend and the UI isn't already open.
-        return (isReadyForInteraction && !isEncounterActive) ? "Consult the Seer" : "";
+        // Always show prompt as long as the encounter isn't already active.
+        return !isEncounterActive ? "Consult the Seer" : "";
     }
 
     public InteractionType GetInteractionType()

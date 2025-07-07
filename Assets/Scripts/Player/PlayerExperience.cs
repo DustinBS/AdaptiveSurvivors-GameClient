@@ -58,14 +58,14 @@ public class PlayerExperience : MonoBehaviour
 
     void OnEnable()
     {
-        // Correctly subscribe to the event.
-        EnemyHealth.OnEnemyDeath += HandleEnemyDeath;
+        // Subscribe to the new, consolidated event.
+        EnemyHealth.OnEnemyDefeated += HandleEnemyDefeated;
     }
 
     void OnDisable()
     {
-        // Correctly unsubscribe from the event.
-        EnemyHealth.OnEnemyDeath -= HandleEnemyDeath;
+        // Unsubscribe from the new, consolidated event.
+        EnemyHealth.OnEnemyDefeated -= HandleEnemyDefeated;
     }
 
     void Start()
@@ -221,10 +221,9 @@ public class PlayerExperience : MonoBehaviour
 
     /// <summary>
     /// Event handler that is called when an enemy is defeated.
-    /// [FIX] The method signature now correctly matches the 'OnEnemyDeath' event delegate.
     /// </summary>
-    private void HandleEnemyDeath(string enemyId, string enemyType, float xpValue)
+    private void HandleEnemyDefeated(EnemyData defeatedEnemyData)
     {
-        AddXP(xpValue);
+        AddXP(defeatedEnemyData.xpValue);
     }
 }

@@ -28,15 +28,16 @@ public class EnemyHealth : MonoBehaviour
     public static event Action<float, Vector3> OnDamaged;
 
     /// <summary>
-    /// Event fired when an enemy dies.
-    /// Parameters: EnemyId (string), EnemyType (string), XP Value (float)
+    /// Event fired when an enemy is defeated, passing its full data object.
+    /// This is the single source of truth for enemy death events.
     /// </summary>
-    public static event Action<string, string, float> OnEnemyDeath;
+    public static event Action<EnemyData> OnEnemyDefeated;
 
     // --- Private Fields ---
     private KafkaClient kafkaClient;
     private string playerId = "player_001";
-    private AdaptiveEnemy adaptiveComponent; // Cached reference
+    private AdaptiveEnemy adaptiveComponent;
+    private EnemyData enemyData;
 
 
     void Awake()
@@ -49,6 +50,7 @@ public class EnemyHealth : MonoBehaviour
 
     public void Initialize(EnemyData data)
     {
+        this.enemyData = data;
         EnemyType = data.enemyID;
         maxHealth = data.maxHealth;
         currentHealth = data.maxHealth;
@@ -75,8 +77,7 @@ public class EnemyHealth : MonoBehaviour
     private void Die(string killingWeaponId)
     {
         StatisticsTracker.RecordEnemyKilled(this.EnemyType);
-
-        OnEnemyDeath?.Invoke(EnemyId, EnemyType, xpValue);
+        OnEnemyDefeated?.Invoke(this.enemyData);
         SendEnemyDeathEvent(killingWeaponId);
         enabled = false;
         Destroy(gameObject);

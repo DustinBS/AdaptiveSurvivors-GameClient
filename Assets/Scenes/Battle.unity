@@ -446,8 +446,9 @@ MonoBehaviour:
   timeElapsed: 0
   bossWaveInterval: 3
   seerPrefab: {fileID: 6422618357747412448, guid: e2c0d9b706c2a2249aad114141fc25fc, type: 3}
-  waveEndElite: {fileID: 11400000, guid: 977a424087b197a40b9a45a7ee41c5d5, type: 2}
+  waveEndElite: {fileID: 11400000, guid: bb88e17d03c696a468835a93f4df8de7, type: 2}
   enemySpawner: {fileID: 1209082159}
+  nextBossToSpawn: {fileID: 11400000, guid: 95e870669bbccbe449e202a486f2a182, type: 2}
   playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
 --- !u!4 &639988202
 Transform:
@@ -798,7 +799,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fodderEnemies:
   - {fileID: 11400000, guid: 753dc9e2209bc78458abd57db4a503bc, type: 2}
-  eliteEnemies: []
+  eliteEnemies:
+  - {fileID: 11400000, guid: bb88e17d03c696a468835a93f4df8de7, type: 2}
   uniqueEliteData:
   - {fileID: 11400000, guid: ee2768f2008371844b77552437ea2bbd, type: 2}
   spawnInterval: 2

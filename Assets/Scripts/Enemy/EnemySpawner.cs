@@ -133,7 +133,18 @@ public class EnemySpawner : MonoBehaviour
         InstantiateAndInitializeEnemy(specialEnemyData);
     }
 
-    private void InstantiateAndInitializeEnemy(EnemyData enemyData)
+    public void SpawnSpecialEnemyAt(EnemyData specialEnemyData, Vector3 spawnPosition)
+    {
+        if (specialEnemyData == null)
+        {
+            Debug.LogError("SpawnSpecialEnemyAt called with null EnemyData.", this);
+            return;
+        }
+        // This reuses your existing instantiation and initialization logic
+        InstantiateAndInitializeEnemyAt(specialEnemyData, spawnPosition);
+    }
+
+    private void InstantiateAndInitializeEnemyAt(EnemyData enemyData, Vector3 spawnPosition)
     {
         if (enemyData.visualPrefab == null)
         {
@@ -146,7 +157,6 @@ public class EnemySpawner : MonoBehaviour
             Debug.Log($"Spawning unique elite '{enemyData.name}' and removing it from the pool.");
         }
 
-        Vector3 spawnPosition = GetRandomSpawnPosition();
         GameObject enemyInstance = Instantiate(enemyData.visualPrefab, spawnPosition, Quaternion.identity, this.transform);
 
         // Add the newly spawned enemy to our tracking list.
@@ -162,6 +172,11 @@ public class EnemySpawner : MonoBehaviour
             Debug.LogError($"Spawned enemy '{enemyData.name}' is missing an EnemyBrain component. Destroying instance.", enemyInstance);
             Destroy(enemyInstance);
         }
+    }
+
+    private void InstantiateAndInitializeEnemy(EnemyData enemyData)
+    {
+        InstantiateAndInitializeEnemyAt(enemyData, GetRandomSpawnPosition());
     }
 
     private EnemyData ChooseEnemyType()

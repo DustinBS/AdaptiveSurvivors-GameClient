@@ -1,29 +1,28 @@
 /* GameClient/Assets/UI/SeerUI.uss */
-
 .seer-root {
     width: 100%;
     height: 100%;
     justify-content: center;
     align-items: center;
-    /* Use the same overlay color as your other UI for consistency */
+    /* Consistent overlay color */
     background-color: var(--color-background-overlay);
 }
 
 .seer-panel {
-    width: 50%;
-    max-width: 800px;
-    padding: 20px;
-    background-color: var(--color-dialogue-background); /* Reusing dialogue theme */
-    border-color: var(--color-dialogue-border); /* Reusing dialogue theme */
+    /* Increased width to allow for more text */
+    width: 80%;
+    max-width: 950px;
+    padding: 10px 15px;
+    background-color: var(--color-dialogue-background);
+    border-color: var(--color-dialogue-border);
     border-width: 2px;
-    border-radius: 15px;
+    border-radius: 10px;
 }
 
-#seer-dialogue-label {
-    font-size: var(--font-size-large);
-    color: var(--color-text-off-white);
+#SeerDialogueLabel {
+    font-size: var(--font-size-normal);
+    color: var(--color-text-primary);
     white-space: normal;
-    margin-bottom: 20px;
     -unity-text-align: upper-left;
 }
 
@@ -33,10 +32,10 @@
 }
 
 .bargain-button {
-    /* Style based on your .dialogue-choice-button for consistency */
     color: var(--color-text-primary);
     background-color: var(--color-dialogue-choice-background);
     border-color: var(--color-dialogue-choice-border);
+    /* Font size reduced for a more compact layout */
     font-size: var(--font-size-normal);
     border-width: 2px;
     border-radius: 8px;
