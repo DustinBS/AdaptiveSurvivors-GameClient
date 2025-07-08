@@ -258,6 +258,20 @@ public class GameManager : MonoBehaviour
             {
                 Debug.LogError("Spawned Seer Prefab is missing a SeerController component!");
             }
+
+            if (KafkaClient.Instance != null && nextBossToSpawn != null)
+            {
+                var payload = new Dictionary<string, object>
+                {
+                    // The Flink job needs these to trigger the correct pipeline
+                    { "encounter_id", (seerEncounterCounter - 1).ToString() },
+                    { "boss_archetype", nextBossToSpawn.archetype.ToString().ToLower() }
+                };
+
+                KafkaClient.Instance.SendGameplayEvent("seer_encounter_begin", playerData.playerID, payload);
+                Debug.Log($"Sent seer_encounter_begin event for encounter {seerEncounterCounter - 1}");
+            }
+
         }
         else
         {
@@ -305,9 +319,8 @@ public class GameManager : MonoBehaviour
 
         var payload = new Dictionary<string, object>
         {
-            { "run_id", this.runId },
-            { "encounter_id", this.seerEncounterCounter - 1 },
-            { "outcome", didPlayerWin ? "win" : "loss" }
+            { "boss_archetype", nextBossToSpawn.archetype.ToString().ToLower() },
+            { "win", didPlayerWin } // true: win, false: lose
         };
 
         if (playerData == null || string.IsNullOrEmpty(playerData.playerID))

@@ -1,6 +1,8 @@
 // GameClient/Assets/Scripts/Managers/PlayerProfileInitializer.cs
 
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
 /// A persistent singleton responsible for initializing core, persistent player data
@@ -10,6 +12,7 @@ using UnityEngine;
 public class PlayerProfileInitializer : MonoBehaviour
 {
     public static PlayerProfileInitializer Instance { get; private set; }
+    private static bool hasSentSessionStartEvent = false;
 
     [Header("Data References")]
     [Tooltip("Reference to the main PlayerData asset that holds the player's profile.")]
@@ -37,7 +40,7 @@ public class PlayerProfileInitializer : MonoBehaviour
         }
 
         // --- Use the override if available in the editor ---
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         // This block of code will only be included in Unity Editor builds.
         // It will be completely stripped out when you build the final game.
         if (!string.IsNullOrEmpty(editorTestPlayerID))
@@ -48,9 +51,42 @@ public class PlayerProfileInitializer : MonoBehaviour
             Debug.LogWarning($"<color=orange>EDITOR OVERRIDE:</color> Using test Player ID: '{editorTestPlayerID}'");
             return; // Skip the normal generation logic
         }
-        #endif
+#endif
 
         // If we are in a real build or the test ID is empty, run the normal logic.
         playerData.EnsurePlayerID();
+
+        if (!hasSentSessionStartEvent)
+        {
+            StartCoroutine(SendSessionStartEventWhenReady());
+            hasSentSessionStartEvent = true;
+        }
+
+    }
+
+    /// <summary>
+    /// Waits until the KafkaClient is available, then sends a single
+    /// 'play_session_started' event to trigger the backend bootstrap job.
+    /// </summary>
+    private IEnumerator SendSessionStartEventWhenReady()
+    {
+        // Wait until the KafkaClient instance is initialized
+        while (KafkaClient.Instance == null)
+        {
+            // Wait for one frame and check again
+            yield return null;
+        }
+
+        Debug.Log("KafkaClient is ready. Sending 'play_session_started' event...");
+        var payload = new Dictionary<string, object>
+        {
+            { "session_start_time", System.DateTime.UtcNow.ToString("o") }
+        };
+
+        KafkaClient.Instance.SendGameplayEvent(
+            "play_session_started",
+            playerData.playerID,
+            payload
+        );
     }
 }

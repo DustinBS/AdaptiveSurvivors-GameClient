@@ -278,10 +278,14 @@ public class KafkaClient : MonoBehaviour
             return;
         }
 
+        // Automatically get the run_id from the GameManager singleton
+        string currentRunId = (GameManager.Instance != null) ? GameManager.Instance.runId : "unknown_run";
+
         var gameplayEvent = new GameplayEvent
         {
             event_type = eventType,
             timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            run_id = currentRunId, // Add the run_id to every event
             player_id = playerId,
             payload = payload
         };
@@ -319,6 +323,7 @@ public class KafkaClient : MonoBehaviour
     {
         public string event_type;
         public long timestamp;
+        public string run_id;
         public string player_id;
         public Dictionary<string, object> payload;
     }
