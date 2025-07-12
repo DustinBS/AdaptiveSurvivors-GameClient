@@ -19,10 +19,12 @@ MonoBehaviour:
   MagnetRange: {fileID: 11400000, guid: b5f32ace0f1bc1241862f866bdfa45ba, type: 2}
   MaxMana: {fileID: 11400000, guid: 80cf50b6d00c8484280cd464367ffc27, type: 2}
   ManaRegen: {fileID: 11400000, guid: beaa78214f2d0b14eae9966700725322, type: 2}
-  CharacterDamageMultiplier: {fileID: 11400000, guid: d0b63ef6c88ddf6438a4afa0139786e0, type: 2}
-  GlobalDamageMultiplier: {fileID: 11400000, guid: 5cb19adadef470c4fb5149f309ed1abe, type: 2}
   BaseDamage: {fileID: 11400000, guid: b1de820bea3043540b2d91efc3b3988d, type: 2}
-  AttackSpeed: {fileID: 11400000, guid: 5a20939752655204383ee9d41609e41a, type: 2}
+  BaseAttackSpeed: {fileID: 11400000, guid: 59ca1af6e3803f24c9be34b85138e239, type: 2}
+  CharacterDamageMultiplier: {fileID: 11400000, guid: d0b63ef6c88ddf6438a4afa0139786e0, type: 2}
+  CharacterAttackSpeedMultiplier: {fileID: 11400000, guid: 651e4f0af65a8034e8a453a15867af48, type: 2}
+  GlobalDamageMultiplier: {fileID: 11400000, guid: 5cb19adadef470c4fb5149f309ed1abe, type: 2}
+  GlobalAttackSpeedMultiplier: {fileID: 11400000, guid: 4bb46282b4928b9478442a15d5b95d5d, type: 2}
   AttackRange: {fileID: 11400000, guid: e3b34f75f3326e0448eba86d20417854, type: 2}
   ProjectileCount: {fileID: 11400000, guid: f8252219ad3720446afaf88414fdf687, type: 2}
   CooldownReduction: {fileID: 11400000, guid: 8b652a0bc50a67847942f68eb782498b, type: 2}

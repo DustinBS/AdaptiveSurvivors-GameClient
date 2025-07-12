@@ -48,20 +48,30 @@ public class PlayerAttack : MonoBehaviour
         // Set the initial attack timer based on the starting weapon's stats.
         if(currentWeapon != null)
         {
-            attackTimer = currentWeapon.attackInterval;
+            attackTimer = currentWeapon.attacksPerSecond;
         }
     }
 
-    void Update()
+void Update()
+{
+    attackTimer -= Time.deltaTime;
+    if (attackTimer <= 0)
     {
-        attackTimer -= Time.deltaTime;
-        if (attackTimer <= 0)
-        {
-            PerformAttack();
-            // Reset timer by fetching the LATEST attack speed value, which may have been upgraded.
-            attackTimer = playerStats.GetAttributeValue(attributeRegistry.AttackSpeed);
-        }
+        PerformAttack();
+
+        // --- Attack Speed & Interval Calculation ---
+        float finalAttacksPerSecond = playerStats.GetComposedStatValue(
+            attributeRegistry.BaseAttackSpeed,
+            attributeRegistry.CharacterAttackSpeedMultiplier,
+            attributeRegistry.GlobalAttackSpeedMultiplier
+        );
+
+        // The interval is the inverse of attacks per second. Prevent division by zero.
+        float finalInterval = (finalAttacksPerSecond > 0) ? 1f / finalAttacksPerSecond : float.MaxValue;
+
+        attackTimer = finalInterval;
     }
+}
 
     private void PerformAttack()
     {
@@ -72,15 +82,11 @@ public class PlayerAttack : MonoBehaviour
         if (nearestEnemy == null) return;
 
         // --- Damage Calculation ---
-        // 1. Get the base damage from the attribute system.
-        float baseDamage = playerStats.GetAttributeValue(attributeRegistry.BaseDamage);
-
-        // 2. Get the multipliers from our attribute system.
-        float charMultiplier = playerStats.GetAttributeValue(attributeRegistry.CharacterDamageMultiplier);
-        float globalMultiplier = playerStats.GetAttributeValue(attributeRegistry.GlobalDamageMultiplier);
-
-        // 3. Calculate the final damage.
-        float finalDamage = baseDamage * charMultiplier * globalMultiplier;
+        float finalDamage = playerStats.GetComposedStatValue(
+            attributeRegistry.BaseDamage,
+            attributeRegistry.CharacterDamageMultiplier,
+            attributeRegistry.GlobalDamageMultiplier
+        );
 
         if (currentWeapon.isProjectile)
 

@@ -20,4 +20,4 @@ MonoBehaviour:
   value: 0
   isPercentage: 0
   behaviorComponentPrefab: {fileID: 2414489924933498474, guid: 1e2f0278b68378d4c9a83160f3ca1192, type: 3}
-  isRepeatable: 1
+  isRepeatable: 0

@@ -43,7 +43,7 @@ public class PlayerBargainController : MonoBehaviour
     private IEnumerator ApplyEffectRoutine(BargainEffect effect)
     {
         // 1. Translate the BargainTargetStat enum to a game AttributeData object.
-        AttributeData targetAttribute = GetAttributeFromBargainStat(effect.targetStat);
+        AttributeData targetAttribute = GetAttributeFromBargainStat(effect);
 
         if (targetAttribute == null)
         {
@@ -70,29 +70,37 @@ public class PlayerBargainController : MonoBehaviour
 
     /// <summary>
     /// Maps the incoming BargainTargetStat enum to the corresponding AttributeData ScriptableObject.
-    /// This is the core of the "Adapter" pattern.
+    /// This version intelligently routes flat vs. percentage bonuses to the correct attribute
+    /// (e.g., flat damage modifies BaseDamage, percentage damage modifies GlobalDamageMultiplier).
     /// </summary>
-    private AttributeData GetAttributeFromBargainStat(BargainTargetStat target)
+    private AttributeData GetAttributeFromBargainStat(BargainEffect effect)
     {
-        switch (target)
+        switch (effect.targetStat)
         {
             case BargainTargetStat.MaxHealth:
+                // Max Health is a base stat, so both flat and percentage bonuses apply to it directly.
                 return attributeRegistry.MaxHealth;
+
             case BargainTargetStat.Armor:
                 return attributeRegistry.Armor;
+
             case BargainTargetStat.MoveSpeed:
                 return attributeRegistry.MoveSpeed;
+
+            case BargainTargetStat.AttackDamage:
+                // If it's a percentage, modify the global multiplier. If it's flat, modify the base.
+                return effect.isPercentage ? attributeRegistry.GlobalDamageMultiplier : attributeRegistry.BaseDamage;
+
+            case BargainTargetStat.AttackSpeed:
+                // Likewise for Attack Speed.
+                return effect.isPercentage ? attributeRegistry.GlobalAttackSpeedMultiplier : attributeRegistry.BaseAttackSpeed;
             // Note: DashCooldown is not yet an attribute in our registry.
             // To implement this, you would add a DashCooldown AttributeData to the registry
             // and have PlayerMovement read from it. For now, we'll leave it out.
             // case BargainTargetStat.DashCooldown:
             //     return attributeRegistry.DashCooldown;
-            case BargainTargetStat.AttackDamage:
-                return attributeRegistry.BaseDamage;
-            case BargainTargetStat.AttackSpeed:
-                return attributeRegistry.AttackSpeed;
             default:
-                Debug.LogWarning($"Bargain effect for '{target}' is not implemented.");
+                Debug.LogWarning($"No AttributeData mapping found for BargainTargetStat: {effect.targetStat}");
                 return null;
         }
     }

@@ -9,13 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 97414fc1b46a25249abf9e8f0410688d, type: 3}
-  m_Name: WD_RustySword
+  m_Script: {fileID: 11500000, guid: 3ef219d90774a344891ee861cb6cffa1, type: 3}
+  m_Name: Attribute_BaseAttackSpeed
   m_EditorClassIdentifier: 
-  weaponID: starter_sword
-  weaponName: Rusty Sword
-  baseDamage: 15
-  attackInterval: 1
-  attackRange: 2.5
-  isProjectile: 0
-  projectilePrefab: {fileID: 0}
+  id: base_attack_speed
+  displayName: Base Attack Speed

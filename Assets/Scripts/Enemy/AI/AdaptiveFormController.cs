@@ -7,8 +7,8 @@ using System.Collections.Generic;
 /// <summary>
 /// Manages an elite enemy's special form adaptations in response to player behavior.
 /// This controller handles the logic for switching between a defensive "Juggernaut" form
-/// and an agile "Skirmisher" form. Transitions cannot be interrupted and smoothly
-/// interpolates gameplay stats in sync with the visual transformation.
+/// and an agile "Skirmisher" form. Transitions cannot be interrupted and
+/// smoothly interpolates gameplay stats in sync with the visual transformation.
 /// </summary>
 [RequireComponent(typeof(EnemyBrain))]
 public class AdaptiveFormController : MonoBehaviour
@@ -26,9 +26,9 @@ public class AdaptiveFormController : MonoBehaviour
 
     [Header("Fatigue Mechanic")]
     [Tooltip("How much longer (in seconds) each distinct transformation adds to the transition duration.")]
-    [SerializeField] private float fatiguePenaltyPerStack = 0.1f;
+    [SerializeField] private float fatiguePenaltyPerStack = 0.2f;
     private const float FATIGUE_RECOVERY_SECONDS = 5.0f;
-    private const float GRACE_PERIOD_SECONDS = 2.0f; // The duration of the spawn grace period before they are penalized.
+    private const float GRACE_PERIOD_SECONDS = 1.0f; // The duration of the spawn grace period before they are penalized.
     private readonly Queue<float> recentTransformationTimes = new Queue<float>();
 
     [Header("Adaptation Modifiers")]
@@ -109,88 +109,118 @@ public class AdaptiveFormController : MonoBehaviour
 
     private void ApplyAdaptation(bool adaptToMelee)
     {
+        if (enemyBrain == null || enemyHealth == null) return;
+
         if (isTransitioning)
         {
             Debug.Log("Cannot adapt: A transition is already in progress.");
             return;
         }
 
-        if (enemyBrain == null || enemyHealth == null) return;
-
-        StartCoroutine(TransitionToFormRoutine(adaptToMelee));
+        if (transitionCoroutine != null)
+        {
+            StopCoroutine(transitionCoroutine);
+        }
+        transitionCoroutine = StartCoroutine(TransitionToFormRoutine(adaptToMelee));
     }
 
     private IEnumerator TransitionToFormRoutine(bool toJuggernaut)
     {
-        isTransitioning = true; // Lock the state.
+        isTransitioning = true; // Lock the controller
         enemyBrain.CanDealContactDamage = false;
 
         AdaptiveState targetState = toJuggernaut ? AdaptiveState.Juggernaut : AdaptiveState.Skirmisher;
         if (currentState == targetState)
         {
-            // If already in the target state, just ensure damage is enabled and exit.
+            // If already in the target state, just clean up and exit.
             isTransitioning = false;
             enemyBrain.CanDealContactDamage = true;
             yield break;
         }
 
-        // --- 1. SETUP AND FATIGUE ---
-        // (Fatigue calculation logic remains the same)
+        // --- 1. SETUP & FATIGUE CALCULATION ---
+        enemyBrain.CanDealContactDamage = false;
+
+        // Prune old timestamps from the fatigue queue.
         while (recentTransformationTimes.Count > 0 && recentTransformationTimes.Peek() < Time.time - FATIGUE_RECOVERY_SECONDS)
         {
             recentTransformationTimes.Dequeue();
         }
-        float currentTransitionDuration = baseTransitionDuration + (recentTransformationTimes.Count * fatiguePenaltyPerStack);
-        recentTransformationTimes.Enqueue(Time.time);
 
+        // Calculate the dynamic transition duration.
+        int fatigueStacks = recentTransformationTimes.Count;
+        float currentTransitionDuration = Mathf.Min(baseTransitionDuration + (fatigueStacks * fatiguePenaltyPerStack),0.5f);
 
-        // --- 2. DEFINE START AND END STATES FOR LERPING ---
-        currentState = targetState;
+        // Only add a fatigue stack if the grace period has passed.
+        if (Time.time > initializationTime + GRACE_PERIOD_SECONDS)
+        {
+            // A transformation is happening, so record the time to add fatigue for the *next* one.
+            recentTransformationTimes.Enqueue(Time.time);
+        }
 
-        // Visuals
+        // --- 2. SETUP BASE VALUES TO TRANSITION FROM ---
+        enemyBrain.ResetStatMultipliers(); // Reset stats to base before the transition starts.
+
+        // Define start/end values for all stats that will be scaled.
         Vector3 startScale = transform.localScale;
         Color startColor = spriteRenderer.color;
-        Vector3 targetScale = toJuggernaut ? Vector3.one * juggernautScale : Vector3.one * skirmisherScale;
-        Color targetColor = toJuggernaut ? juggernautColor : skirmisherColor;
+        Vector3 targetScale;
+        Color targetColor;
 
-        // Gameplay Stats
-        float startHealthMult = enemyHealth.maxHealth / enemyHealth.baseMaxHealth;
-        float startDamageMult = enemyBrain.Damage / enemyBrain.baseDamage;
-        float startSpeedMult = enemyBrain.MoveSpeed / enemyBrain.baseMoveSpeed;
+        float startDamageMod = 1f;
+        float startSpeedMod = 1f;
+        float startHealthMod = 1f;
 
-        float targetHealthMult = toJuggernaut ? juggernautHealthMod : 1.0f;
-        float targetDamageMult = toJuggernaut ? juggernautDamageMod : 1.0f;
-        float targetSpeedMult = toJuggernaut ? 1.0f : skirmisherSpeedMod;
+        float targetDamageMod, targetSpeedMod, targetHealthMod;
 
-        // --- 3. PERFORM SYNCHRONIZED TRANSITION OVER TIME ---
+        if (toJuggernaut)
+        {
+            targetScale = Vector3.one * juggernautScale;
+            targetColor = juggernautColor;
+            targetDamageMod = juggernautDamageMod;
+            targetHealthMod = juggernautHealthMod;
+            targetSpeedMod = 1f; // No speed change for Juggernaut
+        }
+        else // Switching to Skirmisher
+        {
+            targetScale = Vector3.one * skirmisherScale;
+            targetColor = skirmisherColor;
+            targetDamageMod = 1f; // No damage change
+            targetHealthMod = 1f; // No health change
+            targetSpeedMod = skirmisherSpeedMod;
+        }
+
+        // --- 3. PERFORM VISUAL AND GAMEPLAY TRANSITION OVER TIME ---
         float elapsedTime = 0f;
         while (elapsedTime < currentTransitionDuration)
         {
             float progress = elapsedTime / currentTransitionDuration;
 
-            // Interpolate Visuals
+            // Lerp visuals
             transform.localScale = Vector3.Lerp(startScale, targetScale, progress);
             spriteRenderer.color = Color.Lerp(startColor, targetColor, progress);
 
-            // Interpolate Gameplay Stats in sync with visuals
-            enemyHealth.ApplyHealthMultiplier(Mathf.Lerp(startHealthMult, targetHealthMult, progress));
-            enemyBrain.ApplyDamageMultiplier(Mathf.Lerp(startDamageMult, targetDamageMult, progress));
-            enemyBrain.ApplySpeedMultiplier(Mathf.Lerp(startSpeedMult, targetSpeedMult, progress));
+            // --- NEW: Lerp gameplay stats in sync with visuals ---
+            enemyHealth.ApplyHealthMultiplier(Mathf.Lerp(startHealthMod, targetHealthMod, progress));
+            enemyBrain.ApplyDamageMultiplier(Mathf.Lerp(startDamageMod, targetDamageMod, progress));
+            enemyBrain.ApplySpeedMultiplier(Mathf.Lerp(startSpeedMod, targetSpeedMod, progress));
 
             elapsedTime += Time.deltaTime;
             yield return null;
         }
 
         // --- 4. FINALIZE AND CLEAN UP ---
-        // Set final values perfectly to avoid floating point inaccuracies.
+        // Set final values perfectly to correct any Lerp inaccuracies.
         transform.localScale = targetScale;
         spriteRenderer.color = targetColor;
-        enemyHealth.ApplyHealthMultiplier(targetHealthMult);
-        enemyBrain.ApplyDamageMultiplier(targetDamageMult);
-        enemyBrain.ApplySpeedMultiplier(targetSpeedMult);
+        enemyHealth.ApplyHealthMultiplier(targetHealthMod);
+        enemyBrain.ApplyDamageMultiplier(targetDamageMod);
+        enemyBrain.ApplySpeedMultiplier(targetSpeedMod);
 
+        currentState = targetState; // Officially in the new state now.
         enemyBrain.CanDealContactDamage = true;
-        isTransitioning = false; // Unlock the state.
+        isTransitioning = false; // Unlock the controller
+        transitionCoroutine = null;
     }
 
     private IEnumerator OfflineAdaptationRoutine()

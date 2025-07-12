@@ -15,7 +15,11 @@ MonoBehaviour:
   defaultAttributes:
   - attribute: {fileID: 11400000, guid: d0b63ef6c88ddf6438a4afa0139786e0, type: 2}
     value: 1
+  - attribute: {fileID: 11400000, guid: 651e4f0af65a8034e8a453a15867af48, type: 2}
+    value: 1
   - attribute: {fileID: 11400000, guid: 5cb19adadef470c4fb5149f309ed1abe, type: 2}
+    value: 1
+  - attribute: {fileID: 11400000, guid: 4bb46282b4928b9478442a15d5b95d5d, type: 2}
     value: 1
   - attribute: {fileID: 11400000, guid: 0b09b54978caf3f4e95813ce77d5d53c, type: 2}
     value: 100

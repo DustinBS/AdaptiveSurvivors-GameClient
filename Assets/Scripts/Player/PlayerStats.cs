@@ -139,7 +139,7 @@ public class PlayerStats : MonoBehaviour
 
         // Set the base values for stats that come directly from the weapon.
         _baseValues[attributeRegistry.BaseDamage] = weapon.baseDamage;
-        _baseValues[attributeRegistry.AttackSpeed] = weapon.attackInterval;
+        _baseValues[attributeRegistry.BaseAttackSpeed] = weapon.attacksPerSecond;
         _baseValues[attributeRegistry.AttackRange] = weapon.attackRange;
 
         // In the future, a weapon could grant other stats too, like +1 projectile count.
@@ -263,6 +263,23 @@ public class PlayerStats : MonoBehaviour
         currentMana += amount;
         if (currentMana > maxMana) currentMana = maxMana;
         // OnManaChanged?.Invoke(currentMana, GetAttributeValue(attributeRegistry.MaxMana));
+    }
+
+    /// <summary>
+    /// A helper method to calculate a final stat value from a base and its multipliers.
+    /// This centralizes the calculation logic for stats like damage and attack speed.
+    /// Formula: (Base * CharacterMultiplier * GlobalMultiplier)
+    /// </summary>
+    /// <returns>The final composed stat value.</returns>
+    public float GetComposedStatValue(AttributeData baseAttr, AttributeData charMultiplierAttr, AttributeData globalMultiplierAttr)
+    {
+        // Get the value for each component attribute.
+        float baseValue = GetAttributeValue(baseAttr);
+        float charMultiplier = GetAttributeValue(charMultiplierAttr);
+        float globalMultiplier = GetAttributeValue(globalMultiplierAttr);
+
+        // Return the final calculated value.
+        return baseValue * charMultiplier * globalMultiplier;
     }
 
     // --- Kafka Event Senders ---

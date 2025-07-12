@@ -20,10 +20,12 @@ public class AttributeRegistry : ScriptableObject
 
 
     // --- Weapon Stats ---
-    public AttributeData CharacterDamageMultiplier;
-    public AttributeData GlobalDamageMultiplier;
     public AttributeData BaseDamage;
-    public AttributeData AttackSpeed;
+    public AttributeData BaseAttackSpeed;
+    public AttributeData CharacterDamageMultiplier;
+    public AttributeData CharacterAttackSpeedMultiplier;
+    public AttributeData GlobalDamageMultiplier;
+    public AttributeData GlobalAttackSpeedMultiplier;
     public AttributeData AttackRange;
     public AttributeData ProjectileCount;
 

@@ -16,7 +16,7 @@ MonoBehaviour:
   title: Oily Joints
   description: Increases attack speed by 30%
   icon: {fileID: 0}
-  attributeToModify: {fileID: 11400000, guid: 5a20939752655204383ee9d41609e41a, type: 2}
+  attributeToModify: {fileID: 11400000, guid: 4bb46282b4928b9478442a15d5b95d5d, type: 2}
   value: 0.3
   isPercentage: 1
   behaviorComponentPrefab: {fileID: 0}

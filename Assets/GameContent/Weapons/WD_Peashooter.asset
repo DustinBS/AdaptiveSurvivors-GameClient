@@ -15,7 +15,7 @@ MonoBehaviour:
   weaponID: starter_gun
   weaponName: Peashooter
   baseDamage: 10
-  attackInterval: 0.3
+  attacksPerSecond: 3
   attackRange: 6
   isProjectile: 1
   projectilePrefab: {fileID: 9151639593728905853, guid: e1726bd5169029545964f42ca373d983, type: 3}

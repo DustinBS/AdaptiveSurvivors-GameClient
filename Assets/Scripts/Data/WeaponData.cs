@@ -20,8 +20,8 @@ public class WeaponData : ScriptableObject
     [Tooltip("The base damage dealt by a single hit from this weapon.")]
     public float baseDamage = 10f;
 
-    [Tooltip("The time in seconds between each attack.")]
-    public float attackInterval = 1.0f;
+    [Tooltip("How many attacks this weapon performs per second. (e.g., 2.0 = one attack every 0.5s)")]
+    public float attacksPerSecond = 1.0f;
 
     [Tooltip("The radius within which this weapon can detect and attack enemies.")]
     public float attackRange = 5.0f;
