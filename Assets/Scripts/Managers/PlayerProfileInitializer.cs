@@ -45,17 +45,22 @@ public class PlayerProfileInitializer : MonoBehaviour
         // It will be completely stripped out when you build the final game.
         if (!string.IsNullOrEmpty(editorTestPlayerID))
         {
+            // Set the ID using the editor override
             playerData.playerID = editorTestPlayerID;
-            // Also, save it to PlayerPrefs to ensure consistency if anything checks there.
             PlayerPrefs.SetString("player_id", editorTestPlayerID);
             Debug.LogWarning($"<color=orange>EDITOR OVERRIDE:</color> Using test Player ID: '{editorTestPlayerID}'");
-            return; // Skip the normal generation logic
+        }
+        else
+        {
+            // Otherwise, use the normal generation logic
+            playerData.EnsurePlayerID();
         }
 #endif
 
         // If we are in a real build or the test ID is empty, run the normal logic.
         playerData.EnsurePlayerID();
 
+        // Send a single 'play_session_started' event at the start of the game.
         if (!hasSentSessionStartEvent)
         {
             StartCoroutine(SendSessionStartEventWhenReady());

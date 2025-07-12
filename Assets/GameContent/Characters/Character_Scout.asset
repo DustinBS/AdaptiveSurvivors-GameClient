@@ -18,7 +18,7 @@ MonoBehaviour:
   characterSprite: {fileID: 5888622227354725610, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
   characterPortrait: {fileID: -2842755984532108854, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
   baseHealth: 70
-  baseDamage: 7
+  baseDamage: 14
   speedMultiplier: 2
   startingWeapon: {fileID: 11400000, guid: 29ebb4dd76b2a71499b3b5c390150ef0, type: 2}
   hasHealthRegen: 0

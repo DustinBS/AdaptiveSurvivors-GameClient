@@ -125,7 +125,7 @@ MonoBehaviour:
   juggernautScale: 5
   skirmisherScale: 0.5
   juggernautHealthMod: 3
-  juggernautDamageMod: 5
+  juggernautDamageMod: 3
   skirmisherSpeedMod: 2
   offlineSwitchInterval: 5
 --- !u!114 &-3647483566622093229

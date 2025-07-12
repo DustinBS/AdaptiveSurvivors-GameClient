@@ -104,6 +104,7 @@ MonoBehaviour:
   masterUpgradePool:
   - {fileID: 11400000, guid: abaee8c97d494194288e05530c7576ee, type: 2}
   - {fileID: 11400000, guid: 94d2c0436fb7f2543afba3795918f62e, type: 2}
+  - {fileID: 11400000, guid: 2977030eb01a3384ab579ac72ef6146b, type: 2}
 --- !u!114 &327033210970118578
 MonoBehaviour:
   m_ObjectHideFlags: 0
