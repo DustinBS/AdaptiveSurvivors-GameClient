@@ -119,9 +119,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 705e2cc95b3a7aa4cb43bdab2da9e8f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  transitionDuration: 0.25
+  baseTransitionDuration: 0.5
   juggernautColor: {r: 1, g: 0.6, b: 0.6, a: 1}
   skirmisherColor: {r: 0.6, g: 0.8, b: 1, a: 1}
+  fatiguePenaltyPerStack: 0.2
   juggernautScale: 5
   skirmisherScale: 0.5
   juggernautHealthMod: 3

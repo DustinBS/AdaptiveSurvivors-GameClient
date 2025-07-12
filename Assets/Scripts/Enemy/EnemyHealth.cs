@@ -5,21 +5,26 @@ using System.Collections.Generic;
 using System;
 
 /// <summary>
-/// Manages the health of an enemy. Now calculates damage after checking for
-/// resistances from an associated AdaptiveEnemy component.
+/// Manages the health of an enemy. It now stores a base max health value to allow for
+/// safe, non-exponential modification by other systems like AdaptiveFormController.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyHealth : MonoBehaviour
 {
-    // --- Public Fields ---
     [Header("Runtime Enemy Stats")]
     public string EnemyId { get; private set; }
     public string EnemyType { get; private set; }
     [HideInInspector] public float currentHealth;
     [HideInInspector] public float maxHealth;
     [HideInInspector] public float xpValue;
+    
+    // --- Private State ---
+    public float baseMaxHealth;
     private Rigidbody2D rb;
-
+    private KafkaClient kafkaClient;
+    private string lastAttackingPlayerId;
+    private EnemyData enemyData;
+    
     // --- Static Events ---
     /// <summary>
     /// Event fired when an enemy takes damage.
@@ -33,42 +38,49 @@ public class EnemyHealth : MonoBehaviour
     /// </summary>
     public static event Action<EnemyData> OnEnemyDefeated;
 
-    // --- Private Fields ---
-    private KafkaClient kafkaClient;
-    private string lastAttackingPlayerId; // To remember who gets credit for the kill
-    private AdaptiveEnemy adaptiveComponent;
-    private EnemyData enemyData;
-
-
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         kafkaClient = KafkaClient.Instance;
         EnemyId = $"enemy_{GetInstanceID()}";
-        TryGetComponent(out adaptiveComponent);
     }
 
     public void Initialize(EnemyData data)
     {
         this.enemyData = data;
         EnemyType = data.enemyID;
-        maxHealth = data.maxHealth;
-        currentHealth = data.maxHealth;
-        xpValue = data.xpValue;
+        this.baseMaxHealth = data.maxHealth; // Store the original base value.
+        this.maxHealth = data.maxHealth;     // This is the current max health, which can be modified.
+        this.currentHealth = data.maxHealth;
+        this.xpValue = data.xpValue;
+    }
+
+    /// <summary>
+    /// Applies a multiplier to the enemy's base health. This is the safe way to modify health.
+    /// </summary>
+    /// <param name="multiplier">The factor to multiply health by (e.g., 2.0 for Juggernaut, 1.0 to reset).</param>
+    public void ApplyHealthMultiplier(float multiplier)
+    {
+        // 1. Preserve the current health percentage.
+        float healthPercent = (maxHealth > 0) ? currentHealth / maxHealth : 1f;
+
+        // 2. Calculate the new max health from the ORIGINAL base value. This prevents exponential growth.
+        this.maxHealth = this.baseMaxHealth * multiplier;
+
+        // 3. Set the current health to the same percentage of the new max health. This preserves the "chip away" feel.
+        this.currentHealth = this.maxHealth * healthPercent;
     }
 
     public void TakeDamage(float amount, string sourceWeaponId, bool isProjectile, string attackerPlayerId)
     {
         if (!enabled || currentHealth <= 0) return;
 
-        this.lastAttackingPlayerId = attackerPlayerId; // Remember the last attacker
+        this.lastAttackingPlayerId = attackerPlayerId;
 
-        float finalDamage = amount;
+        currentHealth -= amount;
+        OnDamaged?.Invoke(amount, transform.position);
 
-        currentHealth -= finalDamage;
-        OnDamaged?.Invoke(finalDamage, transform.position);
-
-        SendDamageTakenEvent(finalDamage, sourceWeaponId, isProjectile);
+        SendDamageTakenEvent(amount, sourceWeaponId, isProjectile);
 
         if (currentHealth <= 0)
         {
@@ -84,7 +96,6 @@ public class EnemyHealth : MonoBehaviour
         enabled = false;
         Destroy(gameObject);
     }
-
     private void SendDamageTakenEvent(float dmgAmount, string weaponId, bool isProjectile)
     {
         if (kafkaClient == null) return;

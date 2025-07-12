@@ -23,14 +23,15 @@ public class EnemyBrain : MonoBehaviour
     public Collider2D Collider { get; private set; }
     public EnemyHealth Health { get; private set; }
     public EnemyData Data { get; private set; }
+    public bool CanDealContactDamage { get; set; } = true;
 
     // --- Runtime Stats ---
     public float MoveSpeed { get; private set; }
     public float Damage { get; private set; }
 
     // --- Base Stats ---
-    private float baseMoveSpeed;
-    private float baseDamage;
+    public float baseMoveSpeed;
+    public float baseDamage;
 
     // --- Strategy References ---
     private MovementStrategy movementStrategy;
@@ -128,7 +129,7 @@ public class EnemyBrain : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (!isInitialized || !(attackStrategy is ContactAttackStrategy)) return;
+        if (!isInitialized || !CanDealContactDamage || !(attackStrategy is ContactAttackStrategy)) return;
 
         if (collision.gameObject.CompareTag("Player"))
         {

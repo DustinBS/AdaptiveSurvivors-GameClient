@@ -2,42 +2,59 @@
 
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
-/// Manages special form adaptations for an elite enemy. Now features a smooth,
-/// animated transition between forms for better visual feedback.
+/// Manages an elite enemy's special form adaptations in response to player behavior.
+/// This controller handles the logic for switching between a defensive "Juggernaut" form
+/// and an agile "Skirmisher" form. Transitions cannot be interrupted and smoothly
+/// interpolates gameplay stats in sync with the visual transformation.
 /// </summary>
 [RequireComponent(typeof(EnemyBrain))]
 public class AdaptiveFormController : MonoBehaviour
 {
+    // Defines the possible adaptive states of the enemy.
+    private enum AdaptiveState { Normal, Juggernaut, Skirmisher }
+
     [Header("Transition Settings")]
-    [Tooltip("How long the visual transition between forms takes in seconds.")][SerializeField]
-    private float transitionDuration = 0.25f;
-    [Tooltip("The color tint applied to the Juggernaut form.")][SerializeField]
-    private Color juggernautColor = new Color(1f, 0.6f, 0.6f, 1f); // A reddish tint
-    [Tooltip("The color tint applied to the Skirmisher form.")][SerializeField]
-    private Color skirmisherColor = new Color(0.6f, 0.8f, 1f, 1f); // A bluish tint
+    [Tooltip("The base duration of the visual transition in seconds. This is increased by fatigue.")]
+    [SerializeField] private float baseTransitionDuration = 0.20f;
+    [Tooltip("The color tint applied to the Juggernaut form.")]
+    [SerializeField] private Color juggernautColor = new Color(1f, 0.6f, 0.6f, 1f);
+    [Tooltip("The color tint applied to the Skirmisher form.")]
+    [SerializeField] private Color skirmisherColor = new Color(0.6f, 0.8f, 1f, 1f);
+
+    [Header("Fatigue Mechanic")]
+    [Tooltip("How much longer (in seconds) each distinct transformation adds to the transition duration.")]
+    [SerializeField] private float fatiguePenaltyPerStack = 0.1f;
+    private const float FATIGUE_RECOVERY_SECONDS = 5.0f;
+    private const float GRACE_PERIOD_SECONDS = 2.0f; // The duration of the spawn grace period before they are penalized.
+    private readonly Queue<float> recentTransformationTimes = new Queue<float>();
 
     [Header("Adaptation Modifiers")]
     [SerializeField] private float juggernautScale = 3f;
-    [SerializeField] private float skirmisherScale = 0.7f;
+    [SerializeField] private float skirmisherScale = 0.5f;
 
     [Header("Juggernaut (Anti-Melee)")]
-    [SerializeField] private float juggernautHealthMod = 2.0f;
-    [SerializeField] private float juggernautDamageMod = 5f;
+    [SerializeField] private float juggernautHealthMod = 3.0f;
+    [SerializeField] private float juggernautDamageMod = 3f;
 
     [Header("Skirmisher (Anti-Ranged)")]
-    [SerializeField] private float skirmisherSpeedMod = 1.75f;
+    [SerializeField] private float skirmisherSpeedMod = 2f;
 
     [Header("Offline Fallback")]
-    [Tooltip("How often (in seconds) to switch forms if no backend message is received.")][SerializeField]
-    private float offlineSwitchInterval = 5f;
+    [Tooltip("How often (in seconds) to switch forms if no backend message is received.")]
+    [SerializeField] private float offlineSwitchInterval = 5f;
 
+    // --- Component References & State ---
     private EnemyBrain enemyBrain;
     private EnemyHealth enemyHealth;
-    private SpriteRenderer spriteRenderer; // NEW: Reference to the sprite renderer for color tinting.
+    private SpriteRenderer spriteRenderer;
     private Coroutine transitionCoroutine;
     private Coroutine offlineRoutine;
+    private AdaptiveState currentState = AdaptiveState.Normal;
+    private bool isTransitioning = false;
+    private float initializationTime; // Tracks when the enemy was initialized.
     private bool hasReceivedKafkaMessage = false;
     private bool offlineFormIsJuggernaut = true;
 
@@ -45,7 +62,6 @@ public class AdaptiveFormController : MonoBehaviour
     {
         enemyBrain = GetComponent<EnemyBrain>();
         enemyHealth = enemyBrain.Health;
-        // Get the renderer from children to allow for more complex prefabs.
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         if (spriteRenderer == null)
@@ -66,14 +82,21 @@ public class AdaptiveFormController : MonoBehaviour
         {
             enemyBrain.OnInitialized -= HandleEnemyInitialized;
         }
-        StopAllCoroutines(); // Safely stop all coroutines on disable
+        StopAllCoroutines();
     }
 
+    /// <summary>
+    /// Kicks off logic once the enemy is fully initialized and records the spawn time.
+    /// </summary>
     private void HandleEnemyInitialized()
     {
+        initializationTime = Time.time; // Record the time to begin the grace period.
         offlineRoutine = StartCoroutine(OfflineAdaptationRoutine());
     }
 
+    /// <summary>
+    /// Public entry point for applying an adaptation from an external source (e.g., Kafka message).
+    /// </summary>
     public void ApplyAdaptationFromMessage(bool adaptToMelee)
     {
         hasReceivedKafkaMessage = true;
@@ -86,78 +109,88 @@ public class AdaptiveFormController : MonoBehaviour
 
     private void ApplyAdaptation(bool adaptToMelee)
     {
+        if (isTransitioning)
+        {
+            Debug.Log("Cannot adapt: A transition is already in progress.");
+            return;
+        }
+
         if (enemyBrain == null || enemyHealth == null) return;
 
-        // Stop any existing transition before starting a new one.
-        if (transitionCoroutine != null)
-        {
-            StopCoroutine(transitionCoroutine);
-        }
-
-        transitionCoroutine = StartCoroutine(TransitionToFormRoutine(adaptToMelee));
+        StartCoroutine(TransitionToFormRoutine(adaptToMelee));
     }
 
-    /// <summary>
-    /// A coroutine that smoothly transitions the enemy's scale and color to the target form.
-    /// </summary>
     private IEnumerator TransitionToFormRoutine(bool toJuggernaut)
     {
-        // --- 1. Apply Gameplay Stat Changes INSTANTLY ---
-        enemyBrain.ResetStatMultipliers();
+        isTransitioning = true; // Lock the state.
+        enemyBrain.CanDealContactDamage = false;
 
-        Vector3 targetScale;
-        Color targetColor;
-
-        if (toJuggernaut)
+        AdaptiveState targetState = toJuggernaut ? AdaptiveState.Juggernaut : AdaptiveState.Skirmisher;
+        if (currentState == targetState)
         {
-            targetScale = Vector3.one * juggernautScale;
-            targetColor = juggernautColor;
-
-            // Apply Juggernaut stats
-            enemyBrain.ApplyDamageMultiplier(juggernautDamageMod);
-            float healthPercent = enemyHealth.currentHealth / enemyHealth.maxHealth;
-            float newMaxHealth = enemyBrain.Health.maxHealth * juggernautHealthMod;
-            enemyHealth.maxHealth = newMaxHealth;
-            enemyHealth.currentHealth = newMaxHealth * healthPercent;
-        }
-        else
-        {
-            targetScale = Vector3.one * skirmisherScale;
-            targetColor = skirmisherColor;
-
-            // Apply Skirmisher stats
-            enemyBrain.ApplySpeedMultiplier(skirmisherSpeedMod);
+            // If already in the target state, just ensure damage is enabled and exit.
+            isTransitioning = false;
+            enemyBrain.CanDealContactDamage = true;
+            yield break;
         }
 
-        // --- 2. Perform Visual Transition Over Time ---
+        // --- 1. SETUP AND FATIGUE ---
+        // (Fatigue calculation logic remains the same)
+        while (recentTransformationTimes.Count > 0 && recentTransformationTimes.Peek() < Time.time - FATIGUE_RECOVERY_SECONDS)
+        {
+            recentTransformationTimes.Dequeue();
+        }
+        float currentTransitionDuration = baseTransitionDuration + (recentTransformationTimes.Count * fatiguePenaltyPerStack);
+        recentTransformationTimes.Enqueue(Time.time);
+
+
+        // --- 2. DEFINE START AND END STATES FOR LERPING ---
+        currentState = targetState;
+
+        // Visuals
         Vector3 startScale = transform.localScale;
         Color startColor = spriteRenderer.color;
+        Vector3 targetScale = toJuggernaut ? Vector3.one * juggernautScale : Vector3.one * skirmisherScale;
+        Color targetColor = toJuggernaut ? juggernautColor : skirmisherColor;
+
+        // Gameplay Stats
+        float startHealthMult = enemyHealth.maxHealth / enemyHealth.baseMaxHealth;
+        float startDamageMult = enemyBrain.Damage / enemyBrain.baseDamage;
+        float startSpeedMult = enemyBrain.MoveSpeed / enemyBrain.baseMoveSpeed;
+
+        float targetHealthMult = toJuggernaut ? juggernautHealthMod : 1.0f;
+        float targetDamageMult = toJuggernaut ? juggernautDamageMod : 1.0f;
+        float targetSpeedMult = toJuggernaut ? 1.0f : skirmisherSpeedMod;
+
+        // --- 3. PERFORM SYNCHRONIZED TRANSITION OVER TIME ---
         float elapsedTime = 0f;
-
-        while (elapsedTime < transitionDuration)
+        while (elapsedTime < currentTransitionDuration)
         {
-            float progress = elapsedTime / transitionDuration;
+            float progress = elapsedTime / currentTransitionDuration;
 
-            // Smoothly interpolate scale and color
+            // Interpolate Visuals
             transform.localScale = Vector3.Lerp(startScale, targetScale, progress);
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = Color.Lerp(startColor, targetColor, progress);
-            }
+            spriteRenderer.color = Color.Lerp(startColor, targetColor, progress);
+
+            // Interpolate Gameplay Stats in sync with visuals
+            enemyHealth.ApplyHealthMultiplier(Mathf.Lerp(startHealthMult, targetHealthMult, progress));
+            enemyBrain.ApplyDamageMultiplier(Mathf.Lerp(startDamageMult, targetDamageMult, progress));
+            enemyBrain.ApplySpeedMultiplier(Mathf.Lerp(startSpeedMult, targetSpeedMult, progress));
 
             elapsedTime += Time.deltaTime;
             yield return null;
         }
 
-        // --- 3. Finalize Visuals ---
-        // Ensure the final values are set perfectly.
+        // --- 4. FINALIZE AND CLEAN UP ---
+        // Set final values perfectly to avoid floating point inaccuracies.
         transform.localScale = targetScale;
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.color = targetColor;
-        }
+        spriteRenderer.color = targetColor;
+        enemyHealth.ApplyHealthMultiplier(targetHealthMult);
+        enemyBrain.ApplyDamageMultiplier(targetDamageMult);
+        enemyBrain.ApplySpeedMultiplier(targetSpeedMult);
 
-        transitionCoroutine = null;
+        enemyBrain.CanDealContactDamage = true;
+        isTransitioning = false; // Unlock the state.
     }
 
     private IEnumerator OfflineAdaptationRoutine()

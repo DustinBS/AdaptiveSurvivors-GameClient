@@ -146,16 +146,66 @@ public class PlayerStats : MonoBehaviour
         // _baseValues[attributeRegistry.ProjectileCount] = weapon.projectileCount;
     }
 
+    /// <summary>
+    /// Adds a new modifier to a stat. If MaxHealth is modified, it also heals the player
+    /// for the amount gained and triggers a UI update.
+    /// </summary>
     public void AddModifier(AttributeData attribute, AttributeModifier modifier)
     {
-        if (!_modifiers.ContainsKey(attribute)) _modifiers[attribute] = new List<AttributeModifier>();
+        // Get the value before the modifier is applied.
+        float oldValue = GetAttributeValue(attribute);
+
+        if (!_modifiers.ContainsKey(attribute))
+        {
+            _modifiers[attribute] = new List<AttributeModifier>();
+        }
         _modifiers[attribute].Add(modifier);
+
+        // --- Handle side-effects of changing MaxHealth ---
+        if (attribute == attributeRegistry.MaxHealth)
+        {
+            float newValue = GetAttributeValue(attribute);
+            float healthGained = newValue - oldValue;
+            
+            // Heal the player by the amount of max health they gained.
+            if (healthGained > 0)
+            {
+                Heal(healthGained);
+            }
+            else // If max health was reduced, just ensure current health is not over the new max.
+            {
+                if(currentHealth > newValue)
+                {
+                    currentHealth = newValue;
+                }
+                // Manually fire the event since Heal() wasn't called.
+                OnHealthChanged?.Invoke(currentHealth, newValue);
+            }
+        }
     }
 
+    /// <summary>
+    /// Removes a modifier from a stat using its source as a reference. If MaxHealth
+    /// is modified, it ensures current health is clamped to the new maximum.
+    /// </summary>
     public void RemoveModifier(AttributeData attribute, object source)
     {
         if (_modifiers.TryGetValue(attribute, out var modifierList))
-            modifierList.RemoveAll(mod => mod.Source == source);
+        {
+            int removedCount = modifierList.RemoveAll(mod => mod.Source == source);
+
+            // --- Handle side-effects of removing a MaxHealth modifier ---
+            if (removedCount > 0 && attribute == attributeRegistry.MaxHealth)
+            {
+                float newMaxHealth = GetAttributeValue(attribute);
+                if (currentHealth > newMaxHealth)
+                {
+                    currentHealth = newMaxHealth;
+                }
+                // Fire the event to update the UI with the new maximum.
+                OnHealthChanged?.Invoke(currentHealth, newMaxHealth);
+            }
+        }
     }
 
     // --- Health & Damage Logic ---
