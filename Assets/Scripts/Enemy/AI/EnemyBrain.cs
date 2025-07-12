@@ -132,9 +132,9 @@ public class EnemyBrain : MonoBehaviour
 
         if (collision.gameObject.CompareTag("Player"))
         {
-            if (collision.gameObject.TryGetComponent<PlayerStatus>(out var playerStatus))
+            if (collision.gameObject.TryGetComponent<PlayerStats>(out var playerStats))
             {
-                playerStatus.TakeDamage(this.Damage, this.Data.enemyID, this.Data is EliteData);
+                playerStats.TakeDamage(this.Damage, this.Data.enemyID, this.Data is EliteData);
             }
         }
     }

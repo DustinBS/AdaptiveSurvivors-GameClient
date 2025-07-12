@@ -19,11 +19,13 @@ MonoBehaviour:
 '
   characterSprite: {fileID: -1184382605107113275, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
   characterPortrait: {fileID: -8514666527570245238, guid: bcffbc09c2e824e4f874ea56c6c262aa, type: 3}
-  baseHealth: 1500
-  baseDamage: 15
-  speedMultiplier: 0.75
   startingWeapon: {fileID: 11400000, guid: fd520dea82754184aa9179d935b44533, type: 2}
-  hasHealthRegen: 1
-  healthRegenPercent: 0.01
-  defaultUpgradeChoices: 2
-  extraUpgradeChoices: 0
+  baseAttributes:
+  - attribute: {fileID: 11400000, guid: 0b09b54978caf3f4e95813ce77d5d53c, type: 2}
+    value: 1500
+  - attribute: {fileID: 11400000, guid: d0b63ef6c88ddf6438a4afa0139786e0, type: 2}
+    value: 1.5
+  - attribute: {fileID: 11400000, guid: e8ca58ecbafa9ee40a2c2fb1bd1a5312, type: 2}
+    value: 4
+  - attribute: {fileID: 11400000, guid: aa2241012a5e6344789378e1724b2c92, type: 2}
+    value: 0.01

@@ -4,17 +4,16 @@ using UnityEngine;
 /// <summary>
 /// This script acts as the bridge between the persistent PlayerData ScriptableObject
 /// and the player's in-scene components. It runs once on Awake to configure the
-/// player's stats based on the character selected in a previous scene.
+/// player's stats and components based on the character selected in a previous scene.
 /// </summary>
-[RequireComponent(typeof(PlayerStatus))]
 [RequireComponent(typeof(PlayerMovement))]
 [RequireComponent(typeof(PlayerAttack))]
 [RequireComponent(typeof(PlayerExperience))]
 public class PlayerInitializer : MonoBehaviour
 {
     [Header("Data Source")]
-    [Tooltip("Reference to the PlayerData ScriptableObject that holds the current run's configuration.")]
     [SerializeField] private PlayerData playerData;
+    [SerializeField] private DefaultCharacterAttributes defaultAttributes;
 
     [Header("Fallback Data (for testing)")]
     [Tooltip("The default character to use if none is selected (e.g., when starting the scene directly).")]
@@ -42,8 +41,10 @@ public class PlayerInitializer : MonoBehaviour
             }
         }
 
-        // Get the character data we will be using for initialization.
+        // Get the final character data and player ID we will be using for initialization.
         CharacterData characterToLoad = playerData.characterData;
+        string authoritativePlayerId = playerData.playerID;
+
 
         // If the chosen character is missing a starting weapon, assign the default one.
         if (characterToLoad.startingWeapon == null)
@@ -59,19 +60,27 @@ public class PlayerInitializer : MonoBehaviour
             }
         }
 
-        // --- Initialization ---
-        // Get references to all the player's core components.
-        var status = GetComponent<PlayerStatus>();
-        var movement = GetComponent<PlayerMovement>();
-        var attack = GetComponent<PlayerAttack>();
-        var experience = GetComponent<PlayerExperience>();
-        string authoritativePlayerId = playerData.playerID;
+        // --- Core Component Initialization ---
+        var playerStats = GetComponent<PlayerStats>();
+        if (playerStats == null) playerStats = gameObject.AddComponent<PlayerStats>();
 
-        // Call the Initialize methods on each component with the final character data.
-        status.Initialize(characterToLoad, authoritativePlayerId);
-        movement.Initialize(characterToLoad, authoritativePlayerId);
-        attack.Initialize(characterToLoad, authoritativePlayerId);
-        experience.Initialize(characterToLoad, authoritativePlayerId);
+        // 1. Initialize PlayerStats. This clears any old data.
+        playerStats.Initialize(authoritativePlayerId);
+
+        // 2. Apply the UNIVERSAL DEFAULT stats first.
+        if (defaultAttributes != null) playerStats.ApplyBaseAttributes(defaultAttributes.defaultAttributes);
+
+        // 3. Apply the CHARACTER-SPECIFIC stats. These will override any defaults.
+        playerStats.ApplyBaseAttributes(characterToLoad.baseAttributes);
+
+        // 4. Apply the STARTING WEAPON'S base stats.
+        playerStats.ApplyWeaponStats(characterToLoad.startingWeapon);
+
+        // 5. Finalize initialization (e.g. for health UI).
+        playerStats.FinalizeInitialization();
+
+        var attack = GetComponent<PlayerAttack>();
+        if (attack != null) attack.Initialize(characterToLoad);
 
         Debug.Log($"Player initialized successfully with Player ID: {authoritativePlayerId} and Character: {characterToLoad.characterName}");
     }

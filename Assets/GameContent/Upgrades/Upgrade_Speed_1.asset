@@ -16,7 +16,8 @@ MonoBehaviour:
   title: Swift Boots
   description: Increase movement speed by 10%
   icon: {fileID: 0}
-  upgradeType: 2
+  attributeToModify: {fileID: 11400000, guid: e8ca58ecbafa9ee40a2c2fb1bd1a5312, type: 2}
   value: 0.1
   isPercentage: 1
+  behaviorComponentPrefab: {fileID: 0}
   isRepeatable: 1

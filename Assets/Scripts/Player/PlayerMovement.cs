@@ -8,14 +8,14 @@ using System;
 
 /// <summary>
 /// Handles player movement and the dash ability.
+/// It reads the current move speed from the central PlayerStats component.
 /// Sends movement and dash events to Kafka and invokes a C# event on dash.
 /// </summary>
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Base Movement")]
-    private float moveSpeed;
-    private string playerId;
-    private const float BASE_MOVE_SPEED = 5f;
+    [Header("Dependencies")]
+    [Tooltip("A reference to the AttributeRegistry asset. Used to access specific attribute data.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
 
     [Header("Dash Ability")]
     [Tooltip("The high speed applied during the dash.")][SerializeField] public float dashSpeed = 25f;
@@ -23,19 +23,19 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("The cooldown of the dash in seconds.")][SerializeField] public float dashCooldown = 2f;
 
     [Header("Kafka Settings")]
-    [Tooltip("Minimum distance change before sending a new movement event.")][SerializeField] 
+    [Tooltip("Minimum distance change before sending a new movement event.")][SerializeField]
     private float positionEventThreshold = 0.1f;
-    [Tooltip("Minimum direction change before sending a new movement event.")][SerializeField] 
+    [Tooltip("Minimum direction change before sending a new movement event.")][SerializeField]
     private float directionEventThreshold = 0.05f;
 
     // --- Public Events ---
     /// <summary>
     /// Fired when the player executes a dash. The payload is the direction of the dash.
-    /// (Ensured to be declared only once).
     /// </summary>
     public static event Action<Vector2> OnPlayerDashed;
 
-    // --- Private State ---
+    // --- Private State & Component References ---
+    private PlayerStats playerStats;
     private KafkaClient kafkaClient;
     private Rigidbody2D rb;
     private PlayerControls playerControls;
@@ -45,20 +45,16 @@ public class PlayerMovement : MonoBehaviour
     private bool isDashing = false;
     private float lastDashTime = -Mathf.Infinity;
 
-    public void Initialize(CharacterData data, string newPlayerId)
-    {
-        this.playerId = newPlayerId;
-        this.moveSpeed = BASE_MOVE_SPEED * data.speedMultiplier;
-    }
-
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        playerStats = GetComponent<PlayerStats>();
         kafkaClient = FindAnyObjectByType<KafkaClient>();
         playerControls = PlayerInputManager.Instance.PlayerControls;
+
         lastSentPosition = transform.position;
         lastSentDirection = Vector2.zero;
-        lastDashTime = -dashCooldown;
+        lastDashTime = -dashCooldown; // Allows dashing immediately at game start.
     }
 
     void OnEnable()
@@ -73,12 +69,6 @@ public class PlayerMovement : MonoBehaviour
         playerControls.Player.Move.performed -= OnMovePerformed;
         playerControls.Player.Move.canceled -= OnMoveCanceled;
         playerControls.Player.Dash.performed -= OnDashPerformed;
-    }
-
-    public void ModifyMoveSpeed(float value, bool isPercentage)
-    {
-        if (isPercentage) { moveSpeed *= (1 + value); }
-        else { moveSpeed += value; }
     }
 
     public void ModifyDashCooldown(float value, bool isPercentage)
@@ -115,10 +105,11 @@ public class PlayerMovement : MonoBehaviour
         Vector2 dashDirection = currentMovementInput.normalized;
         if (dashDirection == Vector2.zero)
         {
+            // Default dash direction if player is standing still (e.g., up)
             dashDirection = Vector2.up;
         }
-        
-        // Invoke local C# event
+
+        // Invoke local C# event for other gameplay systems to hook into (like a RammingDash behavior)
         OnPlayerDashed?.Invoke(dashDirection);
 
         // Send Kafka event
@@ -126,8 +117,8 @@ public class PlayerMovement : MonoBehaviour
 
         rb.linearVelocity = dashDirection * dashSpeed;
         yield return new WaitForSeconds(dashDuration);
-        rb.linearVelocity = Vector2.zero;
-        
+        rb.linearVelocity = Vector2.zero; // Stop precisely after dash duration.
+
         isDashing = false;
     }
 
@@ -138,14 +129,20 @@ public class PlayerMovement : MonoBehaviour
         {
             { "direction", new Dictionary<string, float> { { "dx", dashDirection.x }, { "dy", dashDirection.y } } }
         };
-        kafkaClient.SendGameplayEvent("player_dash_event", playerId, payload);
+        // Get the player's ID from the central PlayerStats component
+        kafkaClient.SendGameplayEvent("player_dash_event", playerStats.playerID, payload);
     }
 
     void FixedUpdate()
     {
         if (isDashing) return;
+
+        // Fetch the current move speed from PlayerStats every frame.
+        float currentMoveSpeed = playerStats.GetAttributeValue(attributeRegistry.MoveSpeed);
+
         Vector2 movement = currentMovementInput.normalized;
-        rb.linearVelocity = movement * moveSpeed;
+        rb.linearVelocity = movement * currentMoveSpeed;
+
         SendPlayerMovementEvent(movement);
     }
 
@@ -176,7 +173,7 @@ public class PlayerMovement : MonoBehaviour
                 { "pos", new Dictionary<string, float> { { "x", currentPosition.x }, { "y", currentPosition.y } } },
                 { "dir", new Dictionary<string, float> { { "dx", currentDirection.x }, { "dy", currentDirection.y } } }
             };
-            kafkaClient.SendGameplayEvent("player_movement_event", playerId, payload);
+            kafkaClient.SendGameplayEvent("player_movement_event", playerStats.playerID, payload);
             lastSentPosition = currentPosition;
             lastSentDirection = currentDirection;
         }

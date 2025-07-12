@@ -290,6 +290,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: df28ff5500d78f745a8b6957c05841d5, type: 2}
   - {fileID: 11400000, guid: dc4e1d90e4c77064fae38fa4467d71ed, type: 2}
   playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
   sceneToLoad: Hub
 --- !u!114 &1678213564
 MonoBehaviour:

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.SceneManagement;
+using System.Linq; // Required for LINQ queries like FirstOrDefault
 
 /// <summary>
 /// Manages the logic for the Character Selection screen.
@@ -19,6 +20,9 @@ public class CharacterSelectController : MonoBehaviour
 
     [Tooltip("The PlayerData ScriptableObject that will store the selected character and persist across scenes.")]
     public PlayerData playerData;
+
+    [Tooltip("A reference to the AttributeRegistry asset. Used to find which stats to display.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
 
     [Header("Scene Configuration")]
     [Tooltip("The name of the scene to load after a character is selected.")]
@@ -44,7 +48,6 @@ public class CharacterSelectController : MonoBehaviour
 
     private void OnEnable()
     {
-        // Get the root VisualElement from the UIDocument component
         _root = GetComponent<UIDocument>().rootVisualElement;
 
         // --- Query for all necessary UI elements by name ---
@@ -70,15 +73,9 @@ public class CharacterSelectController : MonoBehaviour
     private void OnDisable()
     {
         // It's good practice to unregister callbacks when the object is disabled
-        if (_adaptButton != null)
-        {
-            _adaptButton.clicked -= OnAdaptButtonClicked;
-        }
+        if (_adaptButton != null) _adaptButton.clicked -= OnAdaptButtonClicked;
         // Also unregister the geometry change event in case the object is disabled before it fires.
-        if (_root != null)
-        {
-            _root.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
-        }
+        if (_root != null) _root.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
     }
 
     /// <summary>
@@ -87,11 +84,8 @@ public class CharacterSelectController : MonoBehaviour
     /// </summary>
     private void OnGeometryChanged(GeometryChangedEvent evt)
     {
-        // --- Initial State Setup ---
         PopulateCharacterGrid();
         ResetInfoPanel();
-
-        // The setup is complete, so we unregister the callback to prevent it from running again.
         _root.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
     }
 
@@ -100,31 +94,18 @@ public class CharacterSelectController : MonoBehaviour
     /// </summary>
     private void PopulateCharacterGrid()
     {
-        if (_jarGrid == null)
-        {
-            Debug.LogError("JarGrid VisualElement not found in the UXML.");
-            return;
-        }
-
-        _jarGrid.Clear(); // Clear any existing elements
+        if (_jarGrid == null) return;
+        _jarGrid.Clear();
 
         foreach (var character in availableCharacters)
         {
-            // Create the container for the jar
             var jarElement = new VisualElement();
             jarElement.AddToClassList("character-jar");
-
-            // Create the portrait image
             var portraitImage = new VisualElement();
             portraitImage.AddToClassList("character-portrait-image");
             portraitImage.style.backgroundImage = new StyleBackground(character.characterPortrait);
-
             jarElement.Add(portraitImage);
-
-            // Register a callback for when this jar is clicked.
-            // We pass the character and the jar's VisualElement to the selection handler.
             jarElement.RegisterCallback<ClickEvent>(evt => HandleCharacterSelected(character, jarElement));
-
             _jarGrid.Add(jarElement);
         }
     }
@@ -137,25 +118,18 @@ public class CharacterSelectController : MonoBehaviour
     private void HandleCharacterSelected(CharacterData character, VisualElement jarElement)
     {
         // If there was a previously selected jar, remove its "selected" style
-        if (_selectedJarElement != null)
-        {
-            _selectedJarElement.RemoveFromClassList(SELECTED_JAR_CLASS);
-        }
+        if (_selectedJarElement != null) _selectedJarElement.RemoveFromClassList(SELECTED_JAR_CLASS);
 
-        // Mark the new character and element as selected
         _selectedCharacter = character;
         _selectedJarElement = jarElement;
         _selectedJarElement.AddToClassList(SELECTED_JAR_CLASS);
 
-        // Update the info panel with the new character's details
         UpdateInfoPanel();
-
-        // Enable the "ADAPT" button
         _adaptButton.SetEnabled(true);
     }
 
     /// <summary>
-    /// Updates the left-side info panel with the details of the currently selected character.
+    /// Updates the left-side info panel by reading from the character's baseAttributes list.
     /// </summary>
     private void UpdateInfoPanel()
     {
@@ -167,38 +141,51 @@ public class CharacterSelectController : MonoBehaviour
 
         _characterNameLabel.text = _selectedCharacter.characterName.ToUpper();
         _characterDescriptionLabel.text = _selectedCharacter.description;
-        _baseHealthLabel.text = $"Base Health: {_selectedCharacter.baseHealth}";
-        _baseDamageLabel.text = $"Base Damage: {_selectedCharacter.baseDamage}";
-        _speedMultiplierLabel.text = $"Speed Multiplier: {_selectedCharacter.speedMultiplier}x";
 
-        // Handle the health regen display logic
-        if (_selectedCharacter.hasHealthRegen)
+        // Fetch values using our new data-driven helper method
+        _baseHealthLabel.text = $"Base Health: {GetBaseAttributeValue(_selectedCharacter, attributeRegistry.MaxHealth)}";
+        _baseDamageLabel.text = $"Damage Multiplier: {GetBaseAttributeValue(_selectedCharacter, attributeRegistry.CharacterDamageMultiplier)}";
+        _speedMultiplierLabel.text = $"Speed Multiplier: {GetBaseAttributeValue(_selectedCharacter, attributeRegistry.MoveSpeed)}x";
+
+        float regenValue = GetBaseAttributeValue(_selectedCharacter, attributeRegistry.HealthRegen);
+        if (regenValue > 0)
         {
             _healthRegenContainer.style.display = DisplayStyle.Flex;
-            _healthRegenLabel.text = $"Health Regen: Yes ({_selectedCharacter.healthRegenPercent}%)";
+            _healthRegenLabel.text = $"Health Regen: Yes ({regenValue}%)";
         }
         else
         {
             _healthRegenContainer.style.display = DisplayStyle.None;
         }
 
-        int totalUpgradeChoices = _selectedCharacter.defaultUpgradeChoices + _selectedCharacter.extraUpgradeChoices;
-        _upgradeChoicesLabel.text = $"Upgrade Choices: {totalUpgradeChoices}";
+        float defaultChoices = GetBaseAttributeValue(_selectedCharacter, attributeRegistry.DefaultUpgradeChoices);
+        float extraChoices = GetBaseAttributeValue(_selectedCharacter, attributeRegistry.ExtraUpgradeChoices);
+        _upgradeChoicesLabel.text = $"Upgrade Choices: {defaultChoices + extraChoices}";
     }
 
     /// <summary>
-    /// Resets the info panel to its default, unselected state.
+    /// A helper method to safely find a base attribute's value from a CharacterData.
     /// </summary>
+    /// <returns>The value of the attribute, or 0 if not found.</returns>
+    private float GetBaseAttributeValue(CharacterData data, AttributeData attribute)
+    {
+        if (data == null || attribute == null) return 0;
+
+        var foundAttribute = data.baseAttributes.FirstOrDefault(attr => attr.attribute == attribute);
+        return (foundAttribute != null) ? foundAttribute.value : 0;
+    }
+
     private void ResetInfoPanel()
     {
         _characterNameLabel.text = "SELECT A HEAD";
         _characterDescriptionLabel.text = "Choose your destiny... a new form awaits. Select a specimen from the lab to begin the adaptation process.";
         _baseHealthLabel.text = "Base Health: --";
-        _baseDamageLabel.text = "Base Damage: --";
+        _baseDamageLabel.text = "Damage Multiplier: --";
         _speedMultiplierLabel.text = "Speed Multiplier: --";
-        _healthRegenContainer.style.display = DisplayStyle.Flex; // Show the container but with default text
+        _healthRegenContainer.style.display = DisplayStyle.Flex;
         _healthRegenLabel.text = "Health Regen: --";
         _upgradeChoicesLabel.text = "Upgrade Choices: --";
+        _adaptButton.SetEnabled(false);
     }
 
     /// <summary>
@@ -207,26 +194,10 @@ public class CharacterSelectController : MonoBehaviour
     /// </summary>
     private void OnAdaptButtonClicked()
     {
-        if (_selectedCharacter == null)
-        {
-            Debug.LogWarning("Adapt button was clicked, but no character is selected.");
-            return;
-        }
+        if (_selectedCharacter == null || playerData == null) return;
 
-        if (playerData == null)
-        {
-            Debug.LogError("Cannot start game: PlayerData reference is not set in the inspector!");
-            return;
-        }
-
-        // 1. Assign the chosen character to the PlayerData object
         playerData.characterData = _selectedCharacter;
-
-        // 2. Initialize the PlayerData for the new run
         playerData.InitializeForRun();
-
-        // 3. Load the "Hub" scene
-        Debug.Log($"Loading scene '{sceneToLoad}'...");
         SceneManager.LoadScene(sceneToLoad);
     }
 }

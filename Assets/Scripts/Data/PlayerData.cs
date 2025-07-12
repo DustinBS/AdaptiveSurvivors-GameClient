@@ -19,13 +19,6 @@ public class PlayerData : ScriptableObject
     [Tooltip("The base character data selected for the current run. This is set by the Character Selection screen.")]
     public CharacterData characterData;
 
-    [Header("Runtime Stats")]
-    [Tooltip("The player's current health during a run. This value can change.")]
-    public float currentHealth;
-
-    [Tooltip("The player's current damage during a run. This can be modified by upgrades.")]
-    public float currentDamage;
-
     // A dictionary to hold historical (lifetime) statistics.
     [Header("Historical Stats")]
     [Tooltip("Persistent, lifetime statistics for this player profile.")]
@@ -71,18 +64,13 @@ public class PlayerData : ScriptableObject
             return;
         }
 
-        // Copy the base stats from the selected CharacterData into the PlayerData's runtime fields.
-        // This establishes the starting conditions for the run.
-        currentHealth = characterData.baseHealth;
-        currentDamage = characterData.baseDamage;
-
         // In the future, you would reset other run-specific data here as well.
         // For example:
         // currentExperience = 0;
         // currentLevel = 1;
         // activeUpgrades.Clear();
 
-        Debug.Log($"PlayerData initialized for new run with character: '{characterData.characterName}'. Base Health: {currentHealth}, Base Damage: {currentDamage}");
+        Debug.Log($"PlayerData initialized for new run with character: '{characterData.characterName}'.");
     }
 
     /// <summary>

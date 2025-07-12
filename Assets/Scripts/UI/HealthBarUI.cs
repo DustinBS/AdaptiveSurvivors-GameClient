@@ -1,11 +1,11 @@
 // GameClient/Assets/Scripts/UI/HealthBarUI.cs
 
 using UnityEngine;
-using UnityEngine.UI; // Required for UI components like Slider and Text
+using UnityEngine.UI; // Required for UI components like Slider
 using TMPro; // Required for TextMeshPro UI elements
 
 /// <summary>
-/// Manages the player's health bar UI. It listens to the PlayerStatus component
+/// Manages the player's health bar UI. It listens to the central PlayerStats component
 /// for health changes and updates the UI elements accordingly.
 /// </summary>
 public class HealthBarUI : MonoBehaviour
@@ -17,33 +17,38 @@ public class HealthBarUI : MonoBehaviour
     [Tooltip("Optional: A TextMeshProUGUI component to display health numerically (e.g., '100 / 100').")]
     [SerializeField] private TextMeshProUGUI healthText;
 
-    private PlayerStatus playerStatus;
+    [Header("Dependencies")]
+    [Tooltip("A reference to the AttributeRegistry asset. Used to find the MaxHealth attribute.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
+    
+    private PlayerStats playerStats;
 
     void Start()
     {
-        // Find the PlayerStatus component in the scene.
-        playerStatus = FindFirstObjectByType<PlayerStatus>();
-        if (playerStatus != null)
+        // Find the PlayerStats component in the scene.
+        playerStats = FindFirstObjectByType<PlayerStats>();
+        if (playerStats != null)
         {
-            // Subscribe to the health changed event.
-            playerStatus.OnHealthChanged += UpdateHealthUI;
+            // Subscribe to the health changed event from the new central stats component.
+            playerStats.OnHealthChanged += UpdateHealthUI;
 
             // Initialize the health bar with the player's starting health.
-            UpdateHealthUI(playerStatus.currentHealth, playerStatus.maxHealth);
+            float maxHealth = playerStats.GetAttributeValue(attributeRegistry.MaxHealth);
+            UpdateHealthUI(playerStats.currentHealth, maxHealth);
         }
         else
         {
-            Debug.LogError("HealthBarUI: PlayerStatus component not found in the scene. The health bar will not function.", this);
-            gameObject.SetActive(false); // Disable the health bar if no player status is found.
+            Debug.LogError("HealthBarUI: PlayerStats component not found in the scene. The health bar will not function.", this);
+            gameObject.SetActive(false); // Disable the health bar if no player stats is found.
         }
     }
 
     void OnDestroy()
     {
         // IMPORTANT: Always unsubscribe from events when the object is destroyed to prevent memory leaks.
-        if (playerStatus != null)
+        if (playerStats != null)
         {
-            playerStatus.OnHealthChanged -= UpdateHealthUI;
+            playerStats.OnHealthChanged -= UpdateHealthUI;
         }
     }
 

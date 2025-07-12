@@ -12,8 +12,9 @@ using System.Linq;
 /// </summary>
 public class PlayerExperience : MonoBehaviour
 {
-    private string playerId;
-    private int numberOfUpgradeChoices;
+    [Header("Dependencies")]
+    [Tooltip("A reference to the AttributeRegistry asset. Used to access specific attribute data.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
 
     [Header("Experience Settings")]
     public int currentLevel = 1;
@@ -23,33 +24,28 @@ public class PlayerExperience : MonoBehaviour
     [Header("Upgrade System")]
     [Tooltip("The list of all possible UpgradeData assets that can be offered to the player.")]
     public List<UpgradeData> masterUpgradePool;
+
     // --- Private State ---
-    // This list tracks the unique, non-repeatable upgrades the player has already acquired this run.
     private List<UpgradeData> _acquiredUniqueUpgrades = new List<UpgradeData>();
 
+    // --- Component References ---
     private KafkaClient kafkaClient;
-    private PlayerStatus playerStatus;
-    private PlayerAttack playerAttack;
-    private PlayerMovement playerMovement;
+    private PlayerStats playerStats;
 
+    // --- Events ---
     public event Action<int> OnLevelUp;
     public event Action<float, float> OnXPChanged;
-
-    // The Initialize method, called by PlayerInitializer
-    public void Initialize(CharacterData data, string newPlayerId)
-    {
-        this.playerId = newPlayerId;
-        this.numberOfUpgradeChoices = data.defaultUpgradeChoices + data.extraUpgradeChoices;
-    }
+    
+    // The Initialize method is no longer needed, as this component gets its data from PlayerStats.
+    // public void Initialize(CharacterData data, string newPlayerId) { ... }
 
     void Awake()
     {
+        // Get references to other components.
         kafkaClient = FindAnyObjectByType<KafkaClient>();
-        playerStatus = GetComponent<PlayerStatus>();
-        playerAttack = GetComponent<PlayerAttack>();
-        playerMovement = GetComponent<PlayerMovement>();
+        playerStats = GetComponent<PlayerStats>();
 
-        if (kafkaClient == null || playerStatus == null || playerAttack == null || playerMovement == null)
+        if (kafkaClient == null || playerStats == null)
         {
             Debug.LogError("PlayerExperience: Missing one or more required components.", this);
             enabled = false;
@@ -102,8 +98,7 @@ public class PlayerExperience : MonoBehaviour
     }
 
     /// <summary>
-    /// Selects a number of random, unique upgrades from the pool. This logic is now
-    /// robust and correctly handles repeatable upgrades as fallbacks.
+    /// Selects a number of random, unique upgrades from the pool.
     /// </summary>
     public List<UpgradeData> GetUpgradeChoices()
     {
@@ -112,8 +107,12 @@ public class PlayerExperience : MonoBehaviour
             Debug.LogWarning("Master Upgrade Pool is empty. No upgrades to offer.");
             return new List<UpgradeData>();
         }
-        // 1. Create a pool of all valid candidates for this level-up.
-        // An upgrade is a valid candidate if it's repeatable, OR if it's a unique upgrade the player has not yet acquired.
+        
+        // Fetch the number of choices from our new Attribute System.
+        int defaultChoices = (int)playerStats.GetAttributeValue(attributeRegistry.DefaultUpgradeChoices);
+        int extraChoices = (int)playerStats.GetAttributeValue(attributeRegistry.ExtraUpgradeChoices);
+        int choicesToMake = defaultChoices + extraChoices;
+
         var candidatePool = masterUpgradePool
             .Where(upgrade => upgrade.isRepeatable || !_acquiredUniqueUpgrades.Contains(upgrade))
             .ToList();
@@ -126,25 +125,20 @@ public class PlayerExperience : MonoBehaviour
             Debug.LogError("FATAL: No upgrades available in the candidate pool! Check your upgrade data asset settings.");
             return offeredUpgrades; // Return empty list
         }
-
-        // 2. Get a list of *distinct* candidates to prioritize unique offerings on a single panel.
+        
         var distinctCandidates = candidatePool.Distinct().ToList();
-        int choicesToMake = this.numberOfUpgradeChoices;
 
         for (int i = 0; i < choicesToMake; i++)
         {
             if (distinctCandidates.Count > 0)
             {
-                // Prioritize picking from the distinct list first.
                 int index = random.Next(distinctCandidates.Count);
                 var choice = distinctCandidates[index];
                 offeredUpgrades.Add(choice);
-                distinctCandidates.RemoveAt(index); // Remove to avoid offering the same unique item twice on one panel.
+                distinctCandidates.RemoveAt(index);
             }
             else
             {
-                // If we've run out of distinct options (e.g., we need 3 choices but only have 2 unique candidates left),
-                // we fall back to picking any item from the full candidate pool, which allows for repeatables to fill the slots.
                 Debug.LogWarning("[DEBUG] Ran out of distinct candidates. Falling back to the full candidate pool to fill remaining slots.");
                 int index = random.Next(candidatePool.Count);
                 offeredUpgrades.Add(candidatePool[index]);
@@ -153,13 +147,11 @@ public class PlayerExperience : MonoBehaviour
         return offeredUpgrades;
     }
 
-
     /// <summary>
     /// Applies the chosen upgrade and tracks it if it's not repeatable.
     /// </summary>
     public void ApplyUpgradeAndSendEvent(UpgradeData chosenUpgrade, List<UpgradeData> offeredUpgrades)
     {
-        // If the chosen upgrade is unique, add it to our tracking list so we don't offer it again.
         if (!chosenUpgrade.isRepeatable && !_acquiredUniqueUpgrades.Contains(chosenUpgrade))
         {
             _acquiredUniqueUpgrades.Add(chosenUpgrade);
@@ -171,38 +163,24 @@ public class PlayerExperience : MonoBehaviour
 
     /// <summary>
     /// Applies the effects of the chosen upgrade to the relevant player components.
-    /// This logic is now clean and calls authoritative methods on other components.
     /// </summary>
     private void ApplyUpgrade(UpgradeData upgrade)
     {
-        switch (upgrade.upgradeType)
+        // --- 1. Apply Permanent Stat Modification ---
+        if (upgrade.attributeToModify != null)
         {
-            case UpgradeType.MaxHealth:
-                playerStatus.ModifyMaxHealth(upgrade.value, upgrade.isPercentage);
-                break;
+            // Call the new method in PlayerStats for permanent upgrades.
+            playerStats.ApplyPermanentModifier(upgrade.attributeToModify, upgrade.value, upgrade.isPercentage);
+        }
 
-            case UpgradeType.WeaponDamage:
-                playerAttack.ModifyDamage(upgrade.value, upgrade.isPercentage);
-                break;
-
-            case UpgradeType.MoveSpeed:
-                playerMovement.ModifyMoveSpeed(upgrade.value, upgrade.isPercentage);
-                break;
-
-            case UpgradeType.AttackSpeed:
-                playerAttack.ModifyAttackSpeed(upgrade.value, upgrade.isPercentage);
-                break;
-
-            // Add other cases like AttackSpeed, etc. following the same pattern.
-            // case UpgradeType.AttackSpeed:
-            //     playerAttack.ModifyAttackSpeed(upgrade.value, upgrade.isPercentage);
-            //     break;
-
-            default:
-                Debug.LogWarning($"Upgrade type '{upgrade.upgradeType}' not implemented in PlayerExperience.cs");
-                break;
+        // --- 2. Apply Behavioral Modification ---
+        if (upgrade.behaviorComponentPrefab != null)
+        {
+            Instantiate(upgrade.behaviorComponentPrefab, transform);
+            Debug.Log($"Added new behavior: {upgrade.behaviorComponentPrefab.name}");
         }
     }
+
 
     /// <summary>
     /// Sends an `upgrade_choice_event` to Kafka.
@@ -216,7 +194,8 @@ public class PlayerExperience : MonoBehaviour
             { "chosen_upgrade_id", chosenUpgrade.upgradeID },
             { "rejected_ids", rejectedIds }
         };
-        kafkaClient.SendGameplayEvent("upgrade_choice", playerId, payload);
+        // Get playerID from the central PlayerStats component
+        kafkaClient.SendGameplayEvent("upgrade_choice", playerStats.playerID, payload);
     }
 
     /// <summary>

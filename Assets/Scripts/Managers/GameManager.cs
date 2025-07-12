@@ -64,7 +64,7 @@ public class GameManager : MonoBehaviour
     void OnEnable()
     {
         // Subscribe to the static OnPlayerDeath event when this manager is enabled.
-        PlayerStatus.OnPlayerDeath += HandlePlayerDeath;
+        PlayerStats.OnPlayerDeath += HandlePlayerDeath;
         EnemySpawner.OnAllEnemiesCleared += HandleAllEnemiesCleared;
         EnemyHealth.OnEnemyDefeated += HandleEnemyDefeated;
     }
@@ -72,7 +72,7 @@ public class GameManager : MonoBehaviour
     void OnDisable()
     {
         // ALWAYS unsubscribe from static events on disable/destroy to prevent memory leaks.
-        PlayerStatus.OnPlayerDeath -= HandlePlayerDeath;
+        PlayerStats.OnPlayerDeath -= HandlePlayerDeath;
         EnemySpawner.OnAllEnemiesCleared -= HandleAllEnemiesCleared;
         EnemyHealth.OnEnemyDefeated -= HandleEnemyDefeated;
     }

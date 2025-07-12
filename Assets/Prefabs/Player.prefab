@@ -13,13 +13,13 @@ GameObject:
   - component: {fileID: 6930875909552282488}
   - component: {fileID: 1455772593265856052}
   - component: {fileID: 8988929795559143986}
-  - component: {fileID: 327033210970118578}
   - component: {fileID: 4768832706612263808}
   - component: {fileID: 1259697402762149641}
   - component: {fileID: 385707203089080219}
   - component: {fileID: 5721433740506742812}
   - component: {fileID: 2857188902851953441}
   - component: {fileID: 6703068626198836930}
+  - component: {fileID: 7443170116451386908}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -55,6 +55,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerData: {fileID: 11400000, guid: 1331d69f302540841ade936afdaeaaed, type: 2}
+  defaultAttributes: {fileID: 11400000, guid: a17664c5593e07b4081b7807471a3c30, type: 2}
   defaultCharacterData: {fileID: 11400000, guid: dc4e1d90e4c77064fae38fa4467d71ed, type: 2}
   defaultWeaponData: {fileID: 11400000, guid: fd520dea82754184aa9179d935b44533, type: 2}
 --- !u!114 &6930875909552282488
@@ -69,6 +70,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df7ed6abd1e3ac4ea37c72358ce67f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
   dashSpeed: 25
   dashDuration: 0.15
   dashCooldown: 2
@@ -86,6 +88,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a8dcbf1e4979874e8989d1111b48bfc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
 --- !u!114 &8988929795559143986
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -98,6 +101,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 521d0d09d5e8b054a84787b14f5016d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
   currentLevel: 1
   currentXP: 0
   xpToNextLevel: 10
@@ -105,24 +109,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: abaee8c97d494194288e05530c7576ee, type: 2}
   - {fileID: 11400000, guid: 94d2c0436fb7f2543afba3795918f62e, type: 2}
   - {fileID: 11400000, guid: 2977030eb01a3384ab579ac72ef6146b, type: 2}
---- !u!114 &327033210970118578
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6313925311324587010}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5bddacd75ac818f408713f0eaa069809, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  armor: 0
-  maxMana: 50
-  currentMana: 0
-  activeBuffs: []
-  activeDebuffs: []
-  statusEventSendInterval: 1
+  - {fileID: 11400000, guid: 476fd04d70ea164428a16f7277c94dcc, type: 2}
 --- !u!114 &4768832706612263808
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -303,3 +290,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a58963ccbe97f14ea331f8e8e2be9f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
+--- !u!114 &7443170116451386908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313925311324587010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6946217eec1d5646a9359c03df42521, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  attributeRegistry: {fileID: 11400000, guid: 5ebb7d3071dc18a46b15ebb0526fc397, type: 2}
+  statusEventSendInterval: 1

@@ -5,27 +5,31 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Manages player attacks. Now handles both melee and projectile weapons,
-/// and sends enriched event data to Kafka.
+/// and sends enriched event data to Kafka. It reads all combat stats from the central PlayerStats component.
 /// </summary>
 public class PlayerAttack : MonoBehaviour
 {
-    private string playerId;
-    public WeaponData currentWeapon { get; private set; }
-    private float attackTimer;
-    private float currentDamage;
+    [Header("Dependencies")]
+    [Tooltip("A reference to the AttributeRegistry asset. Used to access specific attribute data.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
+
+    // --- Component & Data References ---
+    private PlayerStats playerStats;
     private KafkaClient kafkaClient;
 
-    public void Initialize(CharacterData data, string newPlayerId)
-    {
-        this.playerId = newPlayerId;
-        this.currentWeapon = data.startingWeapon;
-        this.currentDamage = data.baseDamage;
+    // --- State ---
+    public WeaponData currentWeapon { get; private set; }
+    private float attackTimer;
 
-        if (this.currentWeapon != null)
-        {
-            attackTimer = currentWeapon.attackInterval;
-        }
-        else
+    /// <summary>
+    /// This is now only responsible for setting the weapon based on character data.
+    /// All stats are managed by PlayerStats.
+    /// </summary>
+    public void Initialize(CharacterData data)
+    {
+        this.currentWeapon = data.startingWeapon;
+
+        if (this.currentWeapon == null)
         {
             Debug.LogError("PlayerAttack: CharacterData has no Starting Weapon assigned!", this);
             enabled = false;
@@ -34,7 +38,18 @@ public class PlayerAttack : MonoBehaviour
 
     void Awake()
     {
-        kafkaClient = FindFirstObjectByType<KafkaClient>();
+        // Get references to the other components on this GameObject.
+        playerStats = GetComponent<PlayerStats>();
+        kafkaClient = FindFirstObjectByType<KafkaClient>(); // This can be slow, consider a singleton or service locator pattern later.
+    }
+
+    void Start()
+    {
+        // Set the initial attack timer based on the starting weapon's stats.
+        if(currentWeapon != null)
+        {
+            attackTimer = currentWeapon.attackInterval;
+        }
     }
 
     void Update()
@@ -43,45 +58,32 @@ public class PlayerAttack : MonoBehaviour
         if (attackTimer <= 0)
         {
             PerformAttack();
-            attackTimer = currentWeapon.attackInterval;
+            // Reset timer by fetching the LATEST attack speed value, which may have been upgraded.
+            attackTimer = playerStats.GetAttributeValue(attributeRegistry.AttackSpeed);
         }
-    }
-
-    public void ModifyDamage(float value, bool isPercentage)
-    {
-        if (isPercentage)
-        {
-            currentDamage *= (1 + value);
-        }
-        else
-        {
-            currentDamage += value;
-        }
-    }
-
-    public void ModifyAttackSpeed(float value, bool isPercentage)
-    {
-        // Note: We modify the *interval*. A positive 'speed' modifier should *decrease* the interval.
-        if (isPercentage)
-        {
-            currentWeapon.attackInterval /= (1 + value);
-        }
-        else
-        {
-            // For flat speed, it's harder to define, so we'll treat it as percentage.
-            // This can be adjusted if flat speed reduction is desired.
-            currentWeapon.attackInterval /= (1 + value);
-        }
-        // Ensure interval doesn't go below a minimum threshold.
-        if (currentWeapon.attackInterval < 0.05f) currentWeapon.attackInterval = 0.05f;
     }
 
     private void PerformAttack()
     {
-        GameObject nearestEnemy = FindNearestEnemy();
+        if (currentWeapon == null) return;
+
+        float currentAttackRange = playerStats.GetAttributeValue(attributeRegistry.AttackRange);
+        GameObject nearestEnemy = FindNearestEnemy(currentAttackRange);
         if (nearestEnemy == null) return;
 
+        // --- Damage Calculation ---
+        // 1. Get the base damage from the attribute system.
+        float baseDamage = playerStats.GetAttributeValue(attributeRegistry.BaseDamage);
+
+        // 2. Get the multipliers from our attribute system.
+        float charMultiplier = playerStats.GetAttributeValue(attributeRegistry.CharacterDamageMultiplier);
+        float globalMultiplier = playerStats.GetAttributeValue(attributeRegistry.GlobalDamageMultiplier);
+
+        // 3. Calculate the final damage.
+        float finalDamage = baseDamage * charMultiplier * globalMultiplier;
+
         if (currentWeapon.isProjectile)
+
         {
             // --- PROJECTILE LOGIC ---
             if (currentWeapon.projectilePrefab == null)
@@ -91,27 +93,29 @@ public class PlayerAttack : MonoBehaviour
             }
             Vector2 direction = (nearestEnemy.transform.position - transform.position).normalized;
             PlayerProjectile projectile = Instantiate(currentWeapon.projectilePrefab, transform.position, Quaternion.identity).GetComponent<PlayerProjectile>();
-            projectile.Initialize(direction, this.currentDamage, currentWeapon.isProjectile, this.playerId);
+
+            // Pass the calculated damage and the player's ID to the projectile.
+            projectile.Initialize(direction, finalDamage, currentWeapon.isProjectile, playerStats.playerID);
         }
         else
         {
             // --- MELEE LOGIC ---
             if (nearestEnemy.TryGetComponent<EnemyHealth>(out var enemyHealth))
             {
-                // Directly damage the enemy and pass the 'isProjectile' flag.
-                enemyHealth.TakeDamage(this.currentDamage, currentWeapon.weaponID, currentWeapon.isProjectile, this.playerId);
-                SendDamageDealtEvent(this.currentDamage, enemyHealth.EnemyType);
+                // Directly damage the enemy, passing the player's ID from PlayerStats.
+                enemyHealth.TakeDamage(finalDamage, currentWeapon.weaponID, currentWeapon.isProjectile, playerStats.playerID);
+                SendDamageDealtEvent(finalDamage, enemyHealth.EnemyType);
             }
         }
     }
 
-    private GameObject FindNearestEnemy()
+    private GameObject FindNearestEnemy(float attackRange)
     {
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
         if (enemies.Length == 0) return null;
 
         GameObject nearest = null;
-        float minDistanceSqr = currentWeapon.attackRange * currentWeapon.attackRange;
+        float minDistanceSqr = attackRange * attackRange;
 
         foreach (GameObject enemy in enemies)
         {
@@ -134,14 +138,21 @@ public class PlayerAttack : MonoBehaviour
             { "enemy_type", enemyType },
             { "is_projectile", false }
         };
-        kafkaClient.SendGameplayEvent("player_damage_dealt_event", this.playerId, payload);
+        // Get the player's ID from PlayerStats.
+        kafkaClient.SendGameplayEvent("player_damage_dealt_event", playerStats.playerID, payload);
     }
 
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
-        if (currentWeapon != null)
+        if (playerStats != null && attributeRegistry != null)
         {
+            // Draw the gizmo using the live attack range value from PlayerStats.
+            Gizmos.DrawWireSphere(transform.position, playerStats.GetAttributeValue(attributeRegistry.AttackRange));
+        }
+        else if (currentWeapon != null)
+        {
+            // Fallback for when not in play mode.
             Gizmos.DrawWireSphere(transform.position, currentWeapon.attackRange);
         }
     }

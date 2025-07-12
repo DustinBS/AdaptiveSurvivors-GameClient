@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponID: starter_sword
   weaponName: Rusty Sword
-  baseDamage: 12
+  baseDamage: 15
   attackInterval: 0.8
   attackRange: 2.5
   isProjectile: 0

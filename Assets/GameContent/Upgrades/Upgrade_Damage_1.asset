@@ -16,7 +16,8 @@ MonoBehaviour:
   title: Sharpened Blade
   description: Increases weapon damage by 15%
   icon: {fileID: 0}
-  upgradeType: 5
+  attributeToModify: {fileID: 11400000, guid: b1de820bea3043540b2d91efc3b3988d, type: 2}
   value: 0.15
   isPercentage: 1
+  behaviorComponentPrefab: {fileID: 0}
   isRepeatable: 1

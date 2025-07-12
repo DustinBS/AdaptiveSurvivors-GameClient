@@ -2,33 +2,12 @@
 
 using UnityEngine;
 
-/// <summary>
-/// Enum to define the types of stats or properties an upgrade can affect.
-/// This provides a clear, dropdown-selectable list in the Inspector and avoids "magic strings".
-/// </summary>
-public enum UpgradeType
-{
-    // Player Stats
-    MaxHealth,
-    HealthRegen,
-    MoveSpeed,
-    Armor,
-    MagnetRange,
-
-    // Weapon Stats
-    WeaponDamage,
-    AttackSpeed, // This would translate to modifying attackInterval
-    AttackRange,
-    ProjectileCount,
-
-    // Misc
-    CooldownReduction
-}
-
+// The UpgradeType enum is no longer needed and has been removed.
 
 /// <summary>
 /// Defines a single player upgrade using a ScriptableObject.
 /// This allows for creating a pool of different upgrades as assets in the project.
+/// This version is now fully data-driven, linking to AttributeData assets.
 /// </summary>
 [CreateAssetMenu(fileName = "NewUpgradeData", menuName = "Adaptive Survivors/Upgrade Data")]
 public class UpgradeData : ScriptableObject
@@ -48,15 +27,19 @@ public class UpgradeData : ScriptableObject
     [Tooltip("The icon to display in the upgrade selection UI.")]
     public Sprite icon;
 
-    [Header("Gameplay Effect")]
-    [Tooltip("The type of stat or property this upgrade affects.")]
-    public UpgradeType upgradeType;
+    [Header("Stat Effect")]
+    [Tooltip("The attribute this upgrade modifies. Leave null if this is a behavior-only upgrade.")]
+    public AttributeData attributeToModify;
 
     [Tooltip("The value to modify the stat by. Can be a flat value or a percentage.")]
     public float value;
 
     [Tooltip("Is the 'value' a percentage modifier? If true, 0.1 = +10%. If false, it's a flat addition.")]
     public bool isPercentage;
+
+    [Header("Behavioral Effect")]
+    [Tooltip("A prefab containing a component that grants a new behavior. Instantiated and added to the player when chosen.")]
+    public GameObject behaviorComponentPrefab;
 
     [Header("Behavior")]
     [Tooltip("Can this upgrade be offered multiple times after it has been chosen once? (e.g., for generic stat boosts like '+10 Health').")]

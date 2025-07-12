@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2bd36f0458f7a242b45fa70a6678b7b, type: 3}
+  m_Name: Upgrade_RammingDash
+  m_EditorClassIdentifier: 
+  upgradeID: behavior_ramming_dash
+  title: Ramming Dash
+  description: Your dash now deals a % of your damage to nearby enemies.
+  icon: {fileID: 0}
+  attributeToModify: {fileID: 0}
+  value: 0
+  isPercentage: 0
+  behaviorComponentPrefab: {fileID: 2414489924933498474, guid: 1e2f0278b68378d4c9a83160f3ca1192, type: 3}
+  isRepeatable: 1

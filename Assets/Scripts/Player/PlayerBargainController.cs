@@ -6,27 +6,32 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Manages the application and removal of temporary buffs and debuffs from the Ethereal Seer's bargains.
-/// This component centralizes all modifier logic, keeping other player scripts clean.
+/// This component acts as an "Adapter", translating incoming BargainEffect data into the internal Attribute System.
 /// </summary>
 public class PlayerBargainController : MonoBehaviour
 {
-    // References to the components that will be modified.
-    private PlayerStatus playerStatus;
-    private PlayerAttack playerAttack;
-    private PlayerMovement playerMovement;
+    [Header("Dependencies")]
+    [Tooltip("A reference to the AttributeRegistry asset. Used to map bargain stats to game attributes.")]
+    [SerializeField] private AttributeRegistry attributeRegistry;
+
+    // It now only needs a single reference to the central stats manager.
+    private PlayerStats playerStats;
 
     void Awake()
     {
-        // Cache references for performance.
-        playerStatus = GetComponent<PlayerStatus>();
-        playerAttack = GetComponent<PlayerAttack>();
-        playerMovement = GetComponent<PlayerMovement>();
+        // Cache the reference to the single source of truth for player stats.
+        playerStats = GetComponent<PlayerStats>();
+        if (playerStats == null)
+        {
+            Debug.LogError("PlayerBargainController could not find a PlayerStats component!", this);
+            enabled = false;
+        }
     }
 
     /// <summary>
     /// Applies a list of bargain effects (buffs or debuffs) to the player.
     /// </summary>
-    /// <param name="effects">The list of effects to apply.</param>
+    /// <param name="effects">The list of effects to apply, typically from a Seer bargain.</param>
     public void ApplyBargainEffects(List<BargainEffect> effects)
     {
         foreach (var effect in effects)
@@ -37,51 +42,58 @@ public class PlayerBargainController : MonoBehaviour
 
     private IEnumerator ApplyEffectRoutine(BargainEffect effect)
     {
-        // Apply the effect immediately.
-        ModifyStat(effect.targetStat, effect.modifier, effect.isPercentage);
+        // 1. Translate the BargainTargetStat enum to a game AttributeData object.
+        AttributeData targetAttribute = GetAttributeFromBargainStat(effect.targetStat);
 
-        // Wait for the specified duration.
+        if (targetAttribute == null)
+        {
+            Debug.LogWarning($"No AttributeData mapping found for BargainTargetStat: {effect.targetStat}");
+            yield break; // Stop processing this effect if no attribute is found.
+        }
+
+        // 2. Create the modifier, using the 'effect' object itself as the unique source ID.
+        var modifier = new AttributeModifier(effect.modifier, effect.isPercentage, effect);
+
+        // 3. Apply the modifier to the player.
+        playerStats.AddModifier(targetAttribute, modifier);
+
+        // 4. If the duration is positive, wait and then remove the specific modifier.
         if (effect.duration > 0)
         {
             yield return new WaitForSeconds(effect.duration);
 
-            // Revert the effect by applying the inverse modification.
-            ModifyStat(effect.targetStat, -effect.modifier, effect.isPercentage);
+            // 5. Remove the exact modifier we added by referencing its source.
+            playerStats.RemoveModifier(targetAttribute, effect);
         }
-        // If duration is 0 or less, the effect is permanent for the run.
+        // If duration is 0 or less, the effect is permanent for the run and is never removed.
     }
 
-    private void ModifyStat(BargainTargetStat target, float value, bool isPercentage)
+    /// <summary>
+    /// Maps the incoming BargainTargetStat enum to the corresponding AttributeData ScriptableObject.
+    /// This is the core of the "Adapter" pattern.
+    /// </summary>
+    private AttributeData GetAttributeFromBargainStat(BargainTargetStat target)
     {
         switch (target)
         {
-            // PlayerStatus Mods
             case BargainTargetStat.MaxHealth:
-                playerStatus.ModifyMaxHealth(value, isPercentage);
-                break;
+                return attributeRegistry.MaxHealth;
             case BargainTargetStat.Armor:
-                playerStatus.ModifyArmor(value);
-                break;
-
-            // PlayerMovement Mods
+                return attributeRegistry.Armor;
             case BargainTargetStat.MoveSpeed:
-                playerMovement.ModifyMoveSpeed(value, isPercentage);
-                break;
-            case BargainTargetStat.DashCooldown:
-                playerMovement.ModifyDashCooldown(value, isPercentage);
-                break;
-
-            // PlayerAttack Mods
+                return attributeRegistry.MoveSpeed;
+            // Note: DashCooldown is not yet an attribute in our registry.
+            // To implement this, you would add a DashCooldown AttributeData to the registry
+            // and have PlayerMovement read from it. For now, we'll leave it out.
+            // case BargainTargetStat.DashCooldown:
+            //     return attributeRegistry.DashCooldown;
             case BargainTargetStat.AttackDamage:
-                playerAttack.ModifyDamage(value, isPercentage);
-                break;
+                return attributeRegistry.BaseDamage;
             case BargainTargetStat.AttackSpeed:
-                playerAttack.ModifyAttackSpeed(value, isPercentage);
-                break;
-
+                return attributeRegistry.AttackSpeed;
             default:
                 Debug.LogWarning($"Bargain effect for '{target}' is not implemented.");
-                break;
+                return null;
         }
     }
 }
