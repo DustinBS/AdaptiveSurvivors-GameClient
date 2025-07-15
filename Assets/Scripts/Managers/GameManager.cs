@@ -307,6 +307,11 @@ public class GameManager : MonoBehaviour
             CurrentState = GameState.Playing;
             enemySpawner.StartSpawning(); // Resume normal wave spawning.
         }
+        else if (defeatedEnemyData is EliteData eliteData)
+        {
+            // This is a "win" against an elite. Send the event.
+            SendEliteFightCompletedEvent(eliteData);
+        }
     }
 
     private void SendBossFightCompletedEvent(bool didPlayerWin)
@@ -333,4 +338,36 @@ public class GameManager : MonoBehaviour
         KafkaClient.Instance.SendGameplayEvent("boss_fight_completed", playerId, payload);
         Debug.Log($"Sent boss_fight_completed event. Outcome: {(didPlayerWin ? "win" : "loss")}");
     }
+
+    /// <summary>
+    /// Sends a 'elite_fight_completed' event to Kafka for ML model bootstrapping.
+    /// This is considered a "win" since the elite was defeated.
+    /// </summary>
+    /// <param name="eliteData">The data of the defeated elite.</param>
+    private void SendEliteFightCompletedEvent(EliteData eliteData)
+    {
+        if (KafkaClient.Instance == null)
+        {
+            Debug.LogWarning("KafkaClient instance not found, cannot send elite_fight_completed event.");
+            return;
+        }
+
+        var payload = new Dictionary<string, object>
+        {
+            { "boss_archetype", eliteData.archetype.ToString().ToLower() },
+            { "win", true } // A defeated elite is always a "win" for this purpose.
+        };
+
+        if (playerData == null || string.IsNullOrEmpty(playerData.playerID))
+        {
+            Debug.LogError("PlayerData or PlayerID is not set. Cannot send elite_fight_completed event.", this);
+            return;
+        }
+        string playerId = playerData.playerID;
+
+        // Use a new, distinct event type.
+        KafkaClient.Instance.SendGameplayEvent("elite_fight_completed", playerId, payload);
+        Debug.Log($"Sent elite_fight_completed event for archetype {eliteData.archetype}.");
+    }
+
 }
