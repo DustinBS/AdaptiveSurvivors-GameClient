@@ -222,7 +222,6 @@ public class EnemySpawner : MonoBehaviour
     public void StopSpawning()
     {
         isSpawningPaused = true;
-        Debug.Log("Enemy spawning has been paused.");
     }
 
     /// <summary>
@@ -232,7 +231,6 @@ public class EnemySpawner : MonoBehaviour
     {
         isSpawningPaused = false;
         spawnTimer = spawnInterval; // Reset timer to prevent instant spawn.
-        Debug.Log("Enemy spawning has been resumed.");
     }
 
     private void OnDrawGizmosSelected()

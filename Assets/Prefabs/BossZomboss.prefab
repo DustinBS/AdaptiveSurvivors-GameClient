@@ -110,6 +110,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebb59b80d200e3f4f921d6dafe1fb52c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  baseMoveSpeed: 0
+  baseDamage: 50
   minionToSpawn: {fileID: 11400000, guid: 753dc9e2209bc78458abd57db4a503bc, type: 2}
   spawnInterval: 10
   spawnRadius: 5
+  minionsPerBurst: 2

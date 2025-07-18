@@ -48,4 +48,6 @@ MonoBehaviour:
   ramRadius: 1.5
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 1
+  afterimagePrefab: {fileID: 3374329959943140809, guid: 426917a6d2b72774387530980540bf7e, type: 3}
+  afterimageSpawnRate: 0.05
