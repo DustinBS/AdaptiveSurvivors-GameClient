@@ -26,6 +26,9 @@ public class KafkaClient : MonoBehaviour
     public string adaptiveParamsTopic = "adaptive_params";
     [Tooltip("Topic to consume Seer results from")]
     public string seerResultsTopic = "seer_results";
+    [Tooltip("Topic to consume Vexer predictions from")]
+    public string vexerPredictionTopic = "vexer_prediction_updates";
+
     [Tooltip("Consumer group ID for adaptive parameters")]
     public string consumerGroupId = "unity_game_client";
 
@@ -114,7 +117,7 @@ public class KafkaClient : MonoBehaviour
         {
             var consumerBuilder = new ConsumerBuilder<string, string>(config);
             consumer = consumerBuilder.Build();
-            var topics = new List<string> { adaptiveParamsTopic, seerResultsTopic };
+            var topics = new List<string> { adaptiveParamsTopic, seerResultsTopic, vexerPredictionTopic };
             consumer.Subscribe(topics);
             Debug.Log($"Kafka Consumer subscribed to: {string.Join(", ", topics)}");
         }
@@ -208,7 +211,7 @@ public class KafkaClient : MonoBehaviour
             }
             else
             {
-                // The original logic for adaptive enemies.
+                // Update Vexer and Adaptive brute parameters.
                 OnAdaptiveMessageReceived?.Invoke(envelope);
             }
         }
